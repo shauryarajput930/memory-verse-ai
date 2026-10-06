@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabase";
 import { API_URL } from "@/lib/api";
@@ -96,7 +96,7 @@ export default function TimelineView({ userId, refreshTrigger = 0 }: { userId: s
   const [deletingItem, setDeletingItem] = useState<TimelineItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchTimeline = async () => {
+  const fetchTimeline = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token;
     
@@ -111,10 +111,27 @@ export default function TimelineView({ userId, refreshTrigger = 0 }: { userId: s
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
-    fetchTimeline();
+    let isMounted = true;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
+      try {
+        const res = await fetch(`${API_URL}/api/timeline/${userId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (isMounted) setTimeline(data.timeline || []);
+      } catch (err) {
+        console.error("Failed to fetch timeline:", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    })();
+    return () => { isMounted = false; };
   }, [userId, refreshTrigger]);
 
   const openEditModal = (item: TimelineItem, e?: React.MouseEvent) => {
@@ -261,7 +278,7 @@ export default function TimelineView({ userId, refreshTrigger = 0 }: { userId: s
                       {/* Relationships indicator */}
                       {item.relationships && item.relationships.length > 0 && (
                         <div className="flex -space-x-2">
-                           <div className="w-6 h-6 rounded-full bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-md z-10" title={`${item.relationships.length} connections`}>
+                           <div className="w-6 h-6 rounded-full bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-md z-10" title={`${item.relationships.length} connections (${item.relationships.map(r => formatRelationshipType(r.relationship_type)).join(', ')})`}>
                               <svg className="w-3 h-3 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
                            </div>
                         </div>

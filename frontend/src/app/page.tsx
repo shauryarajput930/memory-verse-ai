@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import UploadUI from "@/components/UploadUI";
 import TimelineView from "@/components/TimelineView";
@@ -10,20 +11,16 @@ import LibraryView from "@/components/LibraryView";
 import ProfileView from "@/components/ProfileView";
 
 export default function Home() {
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [activeView, setActiveView] = useState<"home" | "library" | "profile">("home");
-
-  useEffect(() => {
+  const [activeView, setActiveView] = useState<"home" | "library" | "profile">(() => {
     if (typeof window !== "undefined") {
-      if (window.location.hash === "#library") {
-        setActiveView("library");
-      } else if (window.location.hash === "#profile") {
-        setActiveView("profile");
-      }
+      if (window.location.hash === "#library") return "library";
+      if (window.location.hash === "#profile") return "profile";
     }
-  }, []);
+    return "home";
+  });
 
   const handleNav = (view: "home" | "library" | "profile") => {
     setActiveView(view);
@@ -56,7 +53,7 @@ export default function Home() {
   }
 
   const userId = session.user.id;
-  const userEmail = session.user.email;
+  const userEmail = session.user.email || "";
 
   return (
     <main className="min-h-screen">

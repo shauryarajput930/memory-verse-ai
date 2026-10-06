@@ -11,7 +11,14 @@ allowed_origins = [
 ]
 production_origin = os.getenv("FRONTEND_URL")
 if production_origin:
-    allowed_origins.append(production_origin)
+    for origin in production_origin.split(","):
+        clean_origin = origin.strip().rstrip("/")
+        if clean_origin:
+            if clean_origin not in allowed_origins:
+                allowed_origins.append(clean_origin)
+            with_slash = clean_origin + "/"
+            if with_slash not in allowed_origins:
+                allowed_origins.append(with_slash)
 
 app.add_middleware(
     CORSMiddleware,

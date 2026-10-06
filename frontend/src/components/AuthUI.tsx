@@ -29,8 +29,8 @@ export default function AuthUI() {
         });
         if (error) throw error;
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred during authentication.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error occurred during authentication.");
     } finally {
       setLoading(false);
     }
@@ -47,8 +47,8 @@ export default function AuthUI() {
         },
       });
       if (error) throw error;
-    } catch (err: any) {
-      let msg = err.message || `An error occurred during ${provider} authentication.`;
+    } catch (err: unknown) {
+      let msg = err instanceof Error ? err.message : `An error occurred during ${provider} authentication.`;
       if (msg.toLowerCase().includes("provider is not enabled") || msg.toLowerCase().includes("unsupported provider") || msg.toLowerCase().includes("not configured")) {
         msg = `${provider === 'google' ? 'Google' : 'GitHub'} login is not enabled in your Supabase Console. Please enable the ${provider === 'google' ? 'Google' : 'GitHub'} provider under Authentication → Providers in your Supabase Dashboard.`;
       }

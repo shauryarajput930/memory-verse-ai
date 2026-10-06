@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { UploadCloud, Link as LinkIcon, AlertCircle, FileType, CheckCircle2, ChevronDown, ChevronUp, Edit3, Sparkles, Tag, Calendar, FileText, X, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronUp, Edit3, Sparkles, Tag, Calendar, FileText, X, RefreshCw } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { API_URL } from "@/lib/api";
 import { GlassDatePicker } from "./GlassDatePicker";
@@ -31,7 +31,7 @@ export default function UploadUI({ userId, onUploadSuccess }: { userId: string; 
 
   const [loading, setLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState("");
 
   const handleAutoDetect = async (fileToAnalyze: File | null, urlToAnalyze: string) => {
@@ -140,7 +140,7 @@ export default function UploadUI({ userId, onUploadSuccess }: { userId: string; 
         try {
           const errData = await res.json();
           if (errData.detail) errorMessage = errData.detail;
-        } catch (e) {
+        } catch {
           // Keep default if JSON fails
         }
         throw new Error(errorMessage);
@@ -150,8 +150,8 @@ export default function UploadUI({ userId, onUploadSuccess }: { userId: string; 
       setResult(data);
       resetForm();
       if (onUploadSuccess) onUploadSuccess();
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -184,7 +184,9 @@ export default function UploadUI({ userId, onUploadSuccess }: { userId: string; 
         try {
           const errData = await res.json();
           if (errData.detail) errorMessage = errData.detail;
-        } catch (e) {}
+        } catch {
+          // Keep default if JSON fails
+        }
         throw new Error(errorMessage);
       }
 
@@ -192,8 +194,8 @@ export default function UploadUI({ userId, onUploadSuccess }: { userId: string; 
       setResult(data);
       setGithubUsername("");
       if (onUploadSuccess) onUploadSuccess();
-    } catch (err: any) {
-      setError(err.message || "An error occurred during GitHub sync");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error occurred during GitHub sync");
     } finally {
       setGithubLoading(false);
     }

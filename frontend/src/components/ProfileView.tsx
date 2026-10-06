@@ -22,10 +22,10 @@ export default function ProfileView({ userId, userEmail }: { userId: string, use
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
-        const allItems = data.timeline.flatMap((y: any) => y.items);
+        const allItems = (data.timeline || []).flatMap((y: { items: Array<{ category?: string }> }) => y.items);
         
         const cats: Record<string, number> = {};
-        allItems.forEach((item: any) => {
+        allItems.forEach((item: { category?: string }) => {
           const c = item.category || "Uncategorized";
           cats[c] = (cats[c] || 0) + 1;
         });

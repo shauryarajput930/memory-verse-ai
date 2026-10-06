@@ -4,14 +4,16 @@ Uses Groq's ultra-fast inference with llama-3.3-70b-versatile.
 """
 
 import json
+import os
 import re
 from groq import Groq
 from config import GROQ_API_KEY
 
-client = Groq(api_key=GROQ_API_KEY)
+api_key = GROQ_API_KEY or os.getenv("GROQ_API_KEY") or "dummy_key_for_init"
+client = Groq(api_key=api_key)
 
-PRIMARY_MODEL = "qwen/qwen3.8-27b"
-FALLBACK_MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]
+PRIMARY_MODEL = "llama-3.3-70b-versatile"
+FALLBACK_MODELS = ["llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"]
 
 
 def _strip_fences(text: str) -> str:
@@ -54,7 +56,8 @@ def call_llm_json(system_prompt: str, user_prompt: str, retries: int = 2) -> dic
                         print(f"Groq ({model}) returned non-JSON: {raw[:200]}")
             except Exception as e:
                 print(f"Groq API error on model {model} (attempt {attempt+1}): {e}")
-                break # Try next model if model endpoint errors out
+                break  # Try next model if model endpoint errors out
 
     return {}
+
 

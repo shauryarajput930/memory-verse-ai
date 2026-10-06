@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Link as LinkIcon, FileText, Download, CheckCircle, Search, Filter, ArrowUpDown, ChevronDown, RefreshCw, AlertTriangle, Edit2, Trash2, X } from "lucide-react";
+import { ChevronDown, Edit2, Trash2, X } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { API_URL } from "@/lib/api";
 import { GlassDatePicker } from "./GlassDatePicker";
@@ -150,8 +150,7 @@ export default function LibraryView({ userId }: LibraryViewProps) {
   const [deletingItem, setDeletingItem] = useState<TimelineItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchLibrary = async () => {
-    setLoading(true);
+  const fetchLibrary = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
@@ -159,19 +158,36 @@ export default function LibraryView({ userId }: LibraryViewProps) {
       const res = await fetch(`${API_URL}/api/timeline/${userId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      const data = await res.json();
-      const allItems = data.timeline.flatMap((year: any) => year.items);
+      const data: TimelineResponse = await res.json();
+      const allItems = data.timeline.flatMap((year: TimelineYear) => year.items);
       setData(allItems);
     } catch (err) {
       console.error("Failed to load library:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
-    fetchLibrary();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    let isMounted = true;
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        const res = await fetch(`${API_URL}/api/timeline/${userId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data: TimelineResponse = await res.json();
+        const allItems = data.timeline.flatMap((year: TimelineYear) => year.items);
+        if (isMounted) setData(allItems);
+      } catch (err) {
+        console.error("Failed to load library:", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    })();
+    return () => { isMounted = false; };
   }, [userId]);
 
   const handleRetry = async (docIds: string[]) => {
@@ -394,7 +410,7 @@ export default function LibraryView({ userId }: LibraryViewProps) {
                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                </svg>
             </div>
-            <span className="text-white font-medium">{failedDocs.length} document(s) couldn't be processed by the AI.</span>
+            <span className="text-white font-medium">{failedDocs.length} document(s) couldn&apos;t be processed by the AI.</span>
           </div>
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <button 

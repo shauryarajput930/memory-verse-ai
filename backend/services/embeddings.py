@@ -5,8 +5,15 @@ Runs locally, no API key needed. Fast and lightweight.
 
 from sentence_transformers import SentenceTransformer
 
-# Load model once at import time (~80MB download on first run)
-_model = SentenceTransformer("all-MiniLM-L6-v2")
+_model = None
+
+
+def _get_model() -> SentenceTransformer:
+    global _model
+    if _model is None:
+        _model = SentenceTransformer("all-MiniLM-L6-v2")
+    return _model
+
 
 EMBEDDING_DIM = 384
 
@@ -17,7 +24,8 @@ def get_embedding(text: str) -> list[float]:
     Returns a list of 384 floats.
     """
     text = text[:8000]
-    embedding = _model.encode(text, normalize_embeddings=True)
+    model = _get_model()
+    embedding = model.encode(text, normalize_embeddings=True)
     return embedding.tolist()
 
 
@@ -27,5 +35,7 @@ def get_query_embedding(text: str) -> list[float]:
     Same model, same function — sentence-transformers handles both.
     """
     text = text[:2000]
-    embedding = _model.encode(text, normalize_embeddings=True)
+    model = _get_model()
+    embedding = model.encode(text, normalize_embeddings=True)
     return embedding.tolist()
+

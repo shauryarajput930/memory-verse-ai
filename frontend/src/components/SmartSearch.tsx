@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { API_URL } from "@/lib/api";
 
@@ -21,7 +21,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   Academics: "text-[#06B6D4] border-[#06B6D4]/30 bg-[#06B6D4]/10",
 };
 
-export default function SmartSearch({ userId }: { userId: string }) {
+export default function SmartSearch({ userId }: { userId?: string }) {
+  void userId;
   const [query, setQuery] = useState("");
   const [answer, setAnswer] = useState("");
   const [docs, setDocs] = useState<MatchedDocument[]>([]);
@@ -31,37 +32,8 @@ export default function SmartSearch({ userId }: { userId: string }) {
   // Voice State
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = false;
-        recognitionRef.current.interimResults = false;
-        
-        recognitionRef.current.onresult = (event: any) => {
-          const transcript = event.results[0][0].transcript;
-          setQuery(transcript);
-          submitSearch(transcript);
-        };
-        
-        recognitionRef.current.onerror = () => setIsListening(false);
-        recognitionRef.current.onend = () => setIsListening(false);
-      }
-    }
-  }, []);
-
-  const toggleListening = () => {
-    if (isListening) {
-      recognitionRef.current?.stop();
-    } else {
-      setQuery("");
-      recognitionRef.current?.start();
-      setIsListening(true);
-    }
-  };
 
   const stopSpeaking = () => {
     if (typeof window !== "undefined" && window.speechSynthesis) {
@@ -70,7 +42,7 @@ export default function SmartSearch({ userId }: { userId: string }) {
     }
   };
 
-  const submitSearch = async (searchQuery: string) => {
+  const submitSearch = useCallback(async (searchQuery: string) => {
     if (!searchQuery.trim()) return;
 
     setLoading(true);
@@ -106,6 +78,38 @@ export default function SmartSearch({ userId }: { userId: string }) {
       setAnswer("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = false;
+        
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        recognitionRef.current.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          setQuery(transcript);
+          submitSearch(transcript);
+        };
+        
+        recognitionRef.current.onerror = () => setIsListening(false);
+        recognitionRef.current.onend = () => setIsListening(false);
+      }
+    }
+  }, [submitSearch]);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+    } else {
+      setQuery("");
+      recognitionRef.current?.start();
+      setIsListening(true);
     }
   };
 
