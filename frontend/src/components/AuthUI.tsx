@@ -11,10 +11,18 @@ export default function AuthUI() {
   const [isLogin, setIsLogin] = useState(true);
 
   const getRedirectUrl = () => {
-    if (typeof window !== "undefined" && window.location.origin) {
-      return `${window.location.origin}/`;
+    let url =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (typeof window !== "undefined" && window.location.origin ? window.location.origin : "") ||
+      "http://localhost:3000/";
+
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      url = `https://${url}`;
     }
-    return "http://localhost:3000/";
+    if (!url.endsWith("/")) {
+      url = `${url}/`;
+    }
+    return url;
   };
 
   const handleAuth = async (e: React.FormEvent) => {
