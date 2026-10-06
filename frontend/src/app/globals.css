@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0A0A0F;
+  --foreground: #F8FAFC;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  background-image: 
+    radial-gradient(circle at 15% 25%, rgba(59, 130, 246, 0.15), transparent 45%), 
+    radial-gradient(circle at 85% 75%, rgba(139, 92, 246, 0.15), transparent 45%);
+  background-attachment: fixed;
+  background-size: cover;
+}
+
+/* Smooth scroll */
+html, body {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
+}
+
+/* Spatial Custom Utilities */
+@layer components {
+  .spatial-glass {
+    background-color: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+      0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    border-radius: 28px;
+    transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+
+  .spatial-glass-inner {
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+    border-radius: 20px;
+    transition: all 0.3s ease;
+  }
+
+  .spatial-hover {
+    cursor: pointer;
+  }
+
+  .spatial-hover:hover {
+    transform: scale(1.02) translateY(-4px);
+    box-shadow: 
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.15),
+      0 20px 40px 0 rgba(0, 0, 0, 0.6);
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* Animate-in utility */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-in {
+  animation: fade-in-up 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
