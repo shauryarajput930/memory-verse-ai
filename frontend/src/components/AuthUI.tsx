@@ -10,6 +10,13 @@ export default function AuthUI() {
   const [error, setError] = useState<string | null>(null);
   const [isLogin, setIsLogin] = useState(true);
 
+  const getRedirectUrl = () => {
+    if (typeof window !== "undefined" && window.location.origin) {
+      return `${window.location.origin}/`;
+    }
+    return "http://localhost:3000/";
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -26,6 +33,9 @@ export default function AuthUI() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            emailRedirectTo: getRedirectUrl(),
+          },
         });
         if (error) throw error;
       }
@@ -43,7 +53,7 @@ export default function AuthUI() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
         options: {
-          redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/` : undefined,
+          redirectTo: getRedirectUrl(),
         },
       });
       if (error) throw error;
