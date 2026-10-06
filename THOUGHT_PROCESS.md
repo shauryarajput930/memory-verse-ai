@@ -14,8 +14,8 @@ I chose Next.js for its fast rendering and App Router capabilities. The UI was d
 ### Backend (FastAPI & Python)
 Python was the natural choice for the backend due to its rich AI ecosystem. FastAPI provides sub-second async performance, crucial when handling PDF text extraction, OCR parsing, Cloudinary asset uploads, and Groq LLM inference.
 
-### Data Ingestion & Pre-Upload AI Auto-Detect (PyMuPDF / PyTesseract + Groq `qwen/qwen3.8-27b`)
-Instead of forcing users to manually enter tags or summaries, dropping a file triggers `/api/documents/analyze-preview`. PyMuPDF / PyTesseract extracts raw text, which is paired with filename context and passed to Groq's high-speed inference API running `qwen/qwen3.8-27b` (with fallbacks `openai/gpt-oss-120b`, `openai/gpt-oss-20b`). The LLM returns structured JSON containing title, category, event date, and a 1-2 sentence plain-English summary pre-filled in the summary drawer.
+### Data Ingestion & Pre-Upload AI Auto-Detect (PyMuPDF / PyTesseract + Groq `llama-3.3-70b-versatile`)
+Instead of forcing users to manually enter tags or summaries, dropping a file triggers `/api/documents/analyze-preview`. PyMuPDF / PyTesseract extracts raw text, which is paired with filename context and passed to Groq's high-speed inference API running `llama-3.3-70b-versatile` (with fallbacks `llama-3.1-8b-instant`, `mixtral-8x7b-32768`, `gemma2-9b-it`). The LLM returns structured JSON containing title, category, event date, and a 1-2 sentence plain-English summary pre-filled in the summary drawer.
 
 ### The Relationship Engine (HuggingFace + Supabase pgvector)
 For every uploaded document, the system generates a 384-dimensional vector embedding using `all-MiniLM-L6-v2` from `sentence-transformers`. 
@@ -26,7 +26,11 @@ These embeddings are stored in Supabase using the `pgvector` extension. When a n
 * **OCR Graceful Fallback:** When image certificates had low resolution or Tesseract wasn't installed on Windows, LLMs previously complained about missing OCR data. I resolved this by feeding document filename heuristics and title context into the prompt, guaranteeing clean, accurate summaries.
 * **Format & Extension Fixes:** Prevented double extensions (`.pdf.pdf`) on Cloudinary uploads by passing explicit format properties and public IDs.
 * **Supabase Secret Key Compatibility:** Patched regex handling in Supabase client initialization to support new `sb_secret_...` format keys smoothly.
+* **Render Free Tier Memory Tuning (<512 MB RAM):** Prevented backend container startup crashes by switching Render deployment to `env: docker` (with CPU-only PyTorch) and converting `SentenceTransformer` loading to lazy execution on demand. Container cold-start RAM was reduced from >500 MB to under 120 MB.
+* **Vercel SSG Prerendering Fix:** Prevented static build export failures (`Error: supabaseUrl is required`) by using safe fallback initializers during module evaluation so Next.js static page generation succeeds cleanly.
+* **Auth Redirect `404 DEPLOYMENT_NOT_FOUND` Fix:** Resolved Vercel edge 404 errors after login by introducing dynamic origin resolution (`NEXT_PUBLIC_SITE_URL` / `window.location.origin`), guaranteeing authentication redirects always return to the active production domain.
 
 ## 5. Future Roadmap
 * **Auto-Resume Generation:** Using the connected timeline and relationship graph to automatically generate tailored resumes for specific job applications based on semantic matching.
 * **Skill Gap Analysis:** Identifying missing skills based on the user's career goals and their current uploaded timeline.
+

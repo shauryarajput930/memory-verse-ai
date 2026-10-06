@@ -25,5 +25,14 @@ Create `.env.local` inside `frontend/`:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-supabase-url.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
 ```
+
+## 🌐 Deployment (Vercel)
+
+When deploying to Vercel:
+- **Root Directory**: `frontend`
+- **Framework**: `Next.js`
+- Set `NEXT_PUBLIC_SITE_URL` to your production domain (`https://memory-verse-ai-gray.vercel.app`) to ensure auth redirects return to the active production deployment.
+

@@ -26,7 +26,7 @@ graph TD
     end
     
     subgraph AI_Services [External AI/Storage]
-        Groq[Groq API: qwen/qwen3.8-27b \n NLP Extraction & Summaries]:::ai
+        Groq[Groq API: llama-3.3-70b-versatile \n NLP Extraction & Summaries]:::ai
         Cloudinary[Cloudinary \n Asset Storage]:::database
         GitHubAPI[GitHub REST API]:::backend
     end
