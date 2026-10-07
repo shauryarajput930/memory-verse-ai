@@ -97,12 +97,13 @@ export default function UploadUI({ userId, onUploadSuccess }: { userId: string; 
   const formatNetworkError = (err: unknown, defaultMsg: string): string => {
     if (err instanceof Error) {
       if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError")) {
-        return "Backend API service is currently unreachable. Please verify backend deployment status.";
+        return "Backend server is currently initializing or warming up (Render Cold Start ~30s). Please wait a few seconds and try clicking 'Add to Archive' again.";
       }
       return err.message;
     }
     return defaultMsg;
   };
+
 
   const handleAutoDetect = async (fileToAnalyze: File | null, urlToAnalyze: string) => {
     if (!fileToAnalyze && !urlToAnalyze) return;
