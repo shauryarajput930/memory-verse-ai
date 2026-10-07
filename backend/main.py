@@ -34,5 +34,14 @@ app.include_router(search.router)
 
 
 @app.get("/")
+@app.head("/")
 def read_root():
-    return {"message": "Welcome to MemoryVerse AI Backend", "version": "1.0.0"}
+    return {"message": "Welcome to MemoryVerse AI Backend", "version": "1.0.0", "status": "ok"}
+
+
+@app.get("/health")
+@app.head("/health")
+@app.options("/health")
+def health_check():
+    return {"status": "ok", "service": "memory-verse-ai-backend"}
+

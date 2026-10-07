@@ -1,0 +1,7 @@
+# Netlify Redirects File for MemoryVerse AI
+
+# Health Check redirect rule
+/health    /api/health    200
+
+# Next.js SPA Routing fallback rule
+/*    /index.html    200!
