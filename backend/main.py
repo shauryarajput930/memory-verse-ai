@@ -49,6 +49,11 @@ def read_root():
 @app.get("/health")
 @app.head("/health")
 @app.options("/health")
+@app.get("/api/health")
+@app.head("/api/health")
+@app.options("/api/health")
+@app.get("/api/ping")
 def health_check():
     return {"status": "ok", "service": "memory-verse-ai-backend"}
+
 

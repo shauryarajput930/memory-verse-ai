@@ -28,16 +28,6 @@
   status = 200
 
 [[redirects]]
-  from = "/api/documents/*"
-  to = "https://memoryverse-ai.onrender.com/api/documents/:splat"
-  status = 200
-
-[[redirects]]
-  from = "/api/timeline/*"
-  to = "https://memoryverse-ai.onrender.com/api/timeline/:splat"
-  status = 200
-
-[[redirects]]
-  from = "/api/search/*"
-  to = "https://memoryverse-ai.onrender.com/api/search/:splat"
+  from = "/api/*"
+  to = "https://memoryverse-api.onrender.com/api/:splat"
   status = 200

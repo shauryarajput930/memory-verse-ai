@@ -156,7 +156,9 @@ ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg"}
 
 
 @router.post("/upload", response_model=DocumentResponse)
+@router.post("/archive", response_model=DocumentResponse)
 async def upload_document(
+
     file: Optional[UploadFile] = File(None),
     url: Optional[str] = Form(None),
     title: Optional[str] = Form(None),
