@@ -1,20 +1,80 @@
 "use client";
 
 import React, { useState } from "react";
-import { ChevronDown, ChevronUp, Edit3, Sparkles, Tag, Calendar, FileText, X, RefreshCw } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Edit3,
+  Sparkles,
+  Tag,
+  Calendar,
+  FileText,
+  X,
+  RefreshCw,
+  Code2,
+  Zap,
+  Award,
+  Building2,
+  Trophy,
+  GraduationCap,
+  SlidersHorizontal,
+} from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { API_URL } from "@/lib/api";
 import { GlassDatePicker } from "./GlassDatePicker";
 
 const CATEGORY_PILLS = [
-  { name: "Auto AI Detect", icon: "✨", activeClass: "bg-linear-to-r from-blue-500/30 to-purple-500/30 border-blue-400/60 text-blue-200 shadow-lg shadow-blue-500/20" },
-  { name: "Projects", icon: "💻", activeClass: "bg-[#3B82F6]/30 border-[#3B82F6]/70 text-blue-200 shadow-lg shadow-[#3B82F6]/20" },
-  { name: "Skills", icon: "⚡", activeClass: "bg-[#10B981]/30 border-[#10B981]/70 text-emerald-200 shadow-lg shadow-[#10B981]/20" },
-  { name: "Certifications", icon: "📜", activeClass: "bg-[#F59E0B]/30 border-[#F59E0B]/70 text-amber-200 shadow-lg shadow-[#F59E0B]/20" },
-  { name: "Internships", icon: "💼", activeClass: "bg-[#F97316]/30 border-[#F97316]/70 text-orange-200 shadow-lg shadow-[#F97316]/20" },
-  { name: "Achievements", icon: "🏆", activeClass: "bg-[#F43F5E]/30 border-[#F43F5E]/70 text-rose-200 shadow-lg shadow-[#F43F5E]/20" },
-  { name: "Academics", icon: "🎓", activeClass: "bg-[#06B6D4]/30 border-[#06B6D4]/70 text-cyan-200 shadow-lg shadow-[#06B6D4]/20" },
+  {
+    name: "Auto AI Detect",
+    icon: Sparkles,
+    iconColor: "text-purple-400",
+    activeClass:
+      "bg-linear-to-r from-blue-500/30 to-purple-500/30 border-blue-400/60 text-blue-200 shadow-lg shadow-blue-500/20",
+  },
+  {
+    name: "Projects",
+    icon: Code2,
+    iconColor: "text-blue-400",
+    activeClass:
+      "bg-[#3B82F6]/30 border-[#3B82F6]/70 text-blue-200 shadow-lg shadow-[#3B82F6]/20",
+  },
+  {
+    name: "Skills",
+    icon: Zap,
+    iconColor: "text-emerald-400",
+    activeClass:
+      "bg-[#10B981]/30 border-[#10B981]/70 text-emerald-200 shadow-lg shadow-[#10B981]/20",
+  },
+  {
+    name: "Certifications",
+    icon: Award,
+    iconColor: "text-amber-400",
+    activeClass:
+      "bg-[#F59E0B]/30 border-[#F59E0B]/70 text-amber-200 shadow-lg shadow-[#F59E0B]/20",
+  },
+  {
+    name: "Internships",
+    icon: Building2,
+    iconColor: "text-orange-400",
+    activeClass:
+      "bg-[#F97316]/30 border-[#F97316]/70 text-orange-200 shadow-lg shadow-[#F97316]/20",
+  },
+  {
+    name: "Achievements",
+    icon: Trophy,
+    iconColor: "text-rose-400",
+    activeClass:
+      "bg-[#F43F5E]/30 border-[#F43F5E]/70 text-rose-200 shadow-lg shadow-[#F43F5E]/20",
+  },
+  {
+    name: "Academics",
+    icon: GraduationCap,
+    iconColor: "text-cyan-400",
+    activeClass:
+      "bg-[#06B6D4]/30 border-[#06B6D4]/70 text-cyan-200 shadow-lg shadow-[#06B6D4]/20",
+  },
 ];
+
 
 export default function UploadUI({ userId, onUploadSuccess }: { userId: string; onUploadSuccess?: () => void }) {
   const [file, setFile] = useState<File | null>(null);
@@ -33,6 +93,16 @@ export default function UploadUI({ userId, onUploadSuccess }: { userId: string; 
   const [githubLoading, setGithubLoading] = useState(false);
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState("");
+
+  const formatNetworkError = (err: unknown, defaultMsg: string): string => {
+    if (err instanceof Error) {
+      if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError")) {
+        return "Backend API service is currently unreachable. Please verify backend deployment status.";
+      }
+      return err.message;
+    }
+    return defaultMsg;
+  };
 
   const handleAutoDetect = async (fileToAnalyze: File | null, urlToAnalyze: string) => {
     if (!fileToAnalyze && !urlToAnalyze) return;
@@ -63,13 +133,24 @@ export default function UploadUI({ userId, onUploadSuccess }: { userId: string; 
         if (data.category) setCustomCategory(data.category);
         if (data.event_date) setCustomDate(data.event_date);
         if (data.summary) setCustomSummary(data.summary);
+      } else {
+        let errorMessage = "AI Auto-Detect server error";
+        try {
+          const errData = await res.json();
+          if (errData.detail) errorMessage = errData.detail;
+        } catch {
+          // Keep default if JSON fails
+        }
+        setError(errorMessage);
       }
     } catch (e) {
       console.error("AI preview auto-detect error:", e);
+      setError(formatNetworkError(e, "AI Auto-Detect service is currently unreachable."));
     } finally {
       setAiAnalyzing(false);
     }
   };
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -151,10 +232,11 @@ export default function UploadUI({ userId, onUploadSuccess }: { userId: string; 
       resetForm();
       if (onUploadSuccess) onUploadSuccess();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(formatNetworkError(err, "An error occurred during upload."));
     } finally {
       setLoading(false);
     }
+
   };
 
   const handleGithubSync = async () => {
@@ -195,10 +277,11 @@ export default function UploadUI({ userId, onUploadSuccess }: { userId: string; 
       setGithubUsername("");
       if (onUploadSuccess) onUploadSuccess();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An error occurred during GitHub sync");
+      setError(formatNetworkError(err, "An error occurred during GitHub sync."));
     } finally {
       setGithubLoading(false);
     }
+
   };
 
   return (
@@ -274,9 +357,10 @@ export default function UploadUI({ userId, onUploadSuccess }: { userId: string; 
             >
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
-                  <Edit3 className="w-3.5 h-3.5 text-blue-400" />
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-blue-400" />
                 </div>
                 <span>Customize Details Before Archive</span>
+
                 <span className="text-[10px] text-white/40 bg-white/5 px-2 py-0.5 rounded-full border border-white/10 font-normal">Optional</span>
               </div>
               {showEditDetails ? <ChevronUp className="w-4 h-4 text-white/60"/> : <ChevronDown className="w-4 h-4 text-white/60"/>}
@@ -326,6 +410,7 @@ export default function UploadUI({ userId, onUploadSuccess }: { userId: string; 
                   <div className="flex flex-wrap gap-1.5">
                     {CATEGORY_PILLS.map((pill) => {
                       const isSelected = customCategory === pill.name;
+                      const IconComponent = pill.icon;
                       return (
                         <button
                           key={pill.name}
@@ -337,11 +422,16 @@ export default function UploadUI({ userId, onUploadSuccess }: { userId: string; 
                               : "bg-white/5 border-white/10 text-white/60 hover:text-white hover:bg-white/10"
                           }`}
                         >
-                          <span>{pill.icon}</span>
+                          <IconComponent
+                            className={`w-3.5 h-3.5 ${
+                              isSelected ? "text-current" : pill.iconColor
+                            }`}
+                          />
                           <span>{pill.name}</span>
                         </button>
                       );
                     })}
+
                   </div>
                 </div>
 
