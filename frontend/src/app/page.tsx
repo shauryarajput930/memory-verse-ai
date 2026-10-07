@@ -14,13 +14,7 @@ export default function Home() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [activeView, setActiveView] = useState<"home" | "library" | "profile">(() => {
-    if (typeof window !== "undefined") {
-      if (window.location.hash === "#library") return "library";
-      if (window.location.hash === "#profile") return "profile";
-    }
-    return "home";
-  });
+  const [activeView, setActiveView] = useState<"home" | "library" | "profile">("home");
 
   const handleNav = (view: "home" | "library" | "profile") => {
     setActiveView(view);
@@ -30,22 +24,57 @@ export default function Home() {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    let isMounted = true;
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    if (typeof window !== "undefined") {
+      if (window.location.hash === "#library") setActiveView("library");
+      else if (window.location.hash === "#profile") setActiveView("profile");
+    }
 
-    return () => subscription.unsubscribe();
+    const timeout = setTimeout(() => {
+      if (isMounted) setLoading(false);
+    }, 2500);
+
+    try {
+      supabase.auth
+        .getSession()
+        .then(({ data: { session } }) => {
+          if (isMounted) {
+            setSession(session);
+            setLoading(false);
+          }
+        })
+        .catch((err) => {
+          console.error("Supabase auth session error:", err);
+          if (isMounted) setLoading(false);
+        })
+        .finally(() => clearTimeout(timeout));
+
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (isMounted) setSession(session);
+      });
+
+      return () => {
+        isMounted = false;
+        clearTimeout(timeout);
+        subscription.unsubscribe();
+      };
+    } catch (err) {
+      console.error("Supabase client error:", err);
+      if (isMounted) setLoading(false);
+      clearTimeout(timeout);
+    }
   }, []);
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center text-white"><div className="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin"></div></div>;
+    return (
+      <div className="min-h-screen bg-[#0A0A0F] flex flex-col items-center justify-center text-white p-4">
+        <div className="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin mb-4"></div>
+        <p className="text-xs text-white/50 tracking-widest uppercase">Loading MemoryVerse...</p>
+      </div>
+    );
   }
 
   if (!session) {

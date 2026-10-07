@@ -1,7 +1,5 @@
-# Netlify Redirects File for MemoryVerse AI
+# Netlify Redirects File for MemoryVerse AI (Next.js)
+# Note: Do NOT use forced SPA rewrites (/* /index.html 200!) as Next.js static bundles and SSR routes are handled automatically by @netlify/plugin-nextjs.
 
 # Health Check redirect rule
 /health    /api/health    200
-
-# Next.js SPA Routing fallback rule
-/*    /index.html    200!

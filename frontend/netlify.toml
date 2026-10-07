@@ -25,8 +25,3 @@
   from = "/health"
   to = "/api/health"
   status = 200
-
-[[redirects]]
-  from = "/api/*"
-  to = "/api/:splat"
-  status = 200
