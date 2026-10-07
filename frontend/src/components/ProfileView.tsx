@@ -5,7 +5,7 @@ import { supabase } from "../lib/supabase";
 import { API_URL } from "@/lib/api";
 import { User, LogOut, FileText, Activity } from "lucide-react";
 
-export default function ProfileView({ userId, userEmail }: { userId: string, userEmail: string }) {
+export default function ProfileView({ userId, userEmail, onSignOut }: { userId: string; userEmail: string; onSignOut?: () => void }) {
   const [stats, setStats] = useState({
     totalDocs: 0,
     categories: {} as Record<string, number>
@@ -44,7 +44,11 @@ export default function ProfileView({ userId, userEmail }: { userId: string, use
   }, [userId]);
 
   const handleSignOut = () => {
-    supabase.auth.signOut();
+    if (onSignOut) {
+      onSignOut();
+    } else {
+      supabase.auth.signOut();
+    }
   };
 
   return (

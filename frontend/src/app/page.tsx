@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import UploadUI from "@/components/UploadUI";
@@ -9,17 +10,32 @@ import SmartSearch from "@/components/SmartSearch";
 import AuthUI from "@/components/AuthUI";
 import LibraryView from "@/components/LibraryView";
 import ProfileView from "@/components/ProfileView";
+import { LogOut } from "lucide-react";
 
 export default function Home() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [activeView, setActiveView] = useState<"home" | "library" | "profile">("home");
+  const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const handleNav = (view: "home" | "library" | "profile") => {
     setActiveView(view);
     if (typeof window !== "undefined") {
       window.location.hash = view === "home" ? "" : view;
+    }
+  };
+
+  const handleConfirmSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Error signing out:", err);
+    } finally {
+      setIsSigningOut(false);
+      setShowSignOutModal(false);
     }
   };
 
@@ -117,8 +133,8 @@ export default function Home() {
                 {userEmail}
               </button>
               <button 
-                onClick={() => supabase.auth.signOut()} 
-                className="text-xs md:text-sm text-red-400 hover:text-red-300 transition-colors bg-red-400/10 md:bg-transparent px-3 py-1.5 md:p-0 rounded-lg md:rounded-none hidden md:block"
+                onClick={() => setShowSignOutModal(true)} 
+                className="text-xs md:text-sm text-red-400 hover:text-red-300 transition-colors bg-red-400/10 md:bg-transparent px-3 py-1.5 md:p-0 rounded-lg md:rounded-none hidden md:block cursor-pointer"
               >
                 Sign Out
               </button>
@@ -187,9 +203,52 @@ export default function Home() {
         ) : activeView === "library" ? (
           <LibraryView userId={userId} />
         ) : (
-          <ProfileView userId={userId} userEmail={userEmail} />
+          <ProfileView userId={userId} userEmail={userEmail} onSignOut={() => setShowSignOutModal(true)} />
         )}
       </div>
+
+      {/* ── Sign Out Confirmation Modal ───────────────────────────────── */}
+      {showSignOutModal && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[9999] overflow-y-auto custom-scrollbar">
+          <div className="min-h-full flex items-center justify-center p-4">
+            <div 
+              className="fixed inset-0 bg-black/70 backdrop-blur-md" 
+              onClick={() => !isSigningOut && setShowSignOutModal(false)}
+            ></div>
+            <div className="relative z-10 spatial-glass bg-[#0A0A0F]/95 w-full max-w-sm p-6 sm:p-8 rounded-3xl border border-red-500/20 shadow-[0_10px_40px_rgba(239,68,68,0.15)] animate-in fade-in zoom-in-95 text-center">
+              <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto mb-4 text-red-400">
+                <LogOut className="w-7 h-7" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Sign Out</h3>
+              <p className="text-sm text-white/60 mb-6 leading-relaxed">
+                Are you sure you want to sign out of MemoryVerse?
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setShowSignOutModal(false)}
+                  disabled={isSigningOut}
+                  className="flex-1 py-3 text-sm font-medium bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleConfirmSignOut}
+                  disabled={isSigningOut}
+                  className="flex-1 py-3 text-sm font-semibold bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-red-500/25"
+                >
+                  {isSigningOut ? (
+                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                  ) : null}
+                  {isSigningOut ? "Signing Out..." : "Sign Out"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </main>
   );
 }
