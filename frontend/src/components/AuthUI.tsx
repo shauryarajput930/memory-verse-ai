@@ -15,11 +15,15 @@ export default function AuthUI() {
 
 
   const getRedirectUrl = () => {
-    let url =
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      (typeof window !== "undefined" && window.location.origin ? window.location.origin : "") ||
-      "https://memory-verse-ai.netlify.app/";
+    let url = "";
 
+    if (typeof window !== "undefined" && window.location.origin) {
+      url = window.location.origin;
+    } else if (process.env.NEXT_PUBLIC_SITE_URL) {
+      url = process.env.NEXT_PUBLIC_SITE_URL;
+    } else {
+      url = "https://memory-verse-ai.netlify.app";
+    }
 
     if (!url.startsWith("http://") && !url.startsWith("https://")) {
       url = `https://${url}`;
@@ -29,6 +33,7 @@ export default function AuthUI() {
     }
     return url;
   };
+
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
