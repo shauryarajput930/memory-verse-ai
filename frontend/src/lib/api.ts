@@ -13,7 +13,8 @@ const getApiUrl = (): string => {
     const hostname = window.location.hostname;
     if (hostname !== "localhost" && hostname !== "127.0.0.1") {
       // In production on Netlify, resolve to active Render backend service
-      return "https://memoryverse-ai.onrender.com";
+      return "https://memoryverse-api.onrender.com";
+
     }
   }
 
