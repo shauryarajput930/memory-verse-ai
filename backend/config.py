@@ -21,7 +21,7 @@ SUPABASE_URL = os.getenv("SUPABASE_URL") or "https://placeholder.supabase.co"
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SECRET_KEY") or os.getenv("SUPABASE_SERVICE_KEY") or "placeholder-key"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-re.match = _orig_match
+
 
 # Cloudinary
 cloudinary.config(

@@ -1,9 +1,10 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import ingestion, timeline, search
+from routers import ingestion, timeline, search, auth
 
 app = FastAPI(title="MemoryVerse AI Backend", version="1.0.0")
+
 
 allowed_origins = [
     "http://localhost:3000",
@@ -31,6 +32,8 @@ app.add_middleware(
 app.include_router(ingestion.router)
 app.include_router(timeline.router)
 app.include_router(search.router)
+app.include_router(auth.router)
+
 
 
 @app.get("/")

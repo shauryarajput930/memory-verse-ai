@@ -8,7 +8,10 @@ export default function AuthUI() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [isLogin, setIsLogin] = useState(true);
+
+
 
   const getRedirectUrl = () => {
     let url =
@@ -29,6 +32,7 @@ export default function AuthUI() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setMessage(null);
 
     try {
       if (isLogin) {
@@ -36,9 +40,17 @@ export default function AuthUI() {
           email,
           password,
         });
-        if (error) throw error;
+        if (error) {
+          if (error.message.toLowerCase().includes("email not confirmed")) {
+            throw new Error("Email not confirmed. Please check your email inbox to verify your account before logging in.");
+          }
+          if (error.message.toLowerCase().includes("invalid login credentials")) {
+            throw new Error("Invalid email or password. Please double-check your credentials.");
+          }
+          throw error;
+        }
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -46,6 +58,11 @@ export default function AuthUI() {
           },
         });
         if (error) throw error;
+
+        if (data?.user && !data.session) {
+          setMessage("Account created! Please check your email to confirm your account before logging in.");
+          setIsLogin(true);
+        }
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "An error occurred during authentication.");
@@ -57,6 +74,7 @@ export default function AuthUI() {
   const handleOAuth = async (provider: 'github' | 'google') => {
     setLoading(true);
     setError(null);
+    setMessage(null);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
@@ -110,7 +128,18 @@ export default function AuthUI() {
             />
           </div>
 
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+          {message && (
+            <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-xl">
+              {message}
+            </div>
+          )}
+
+          {error && (
+            <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl">
+              {error}
+            </div>
+          )}
+
 
           <button
             type="submit"
