@@ -17,10 +17,11 @@ from supabase import create_client, Client
 load_dotenv()
 
 # Supabase
-SUPABASE_URL = os.getenv("SUPABASE_URL") or "https://placeholder.supabase.co"
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SECRET_KEY") or os.getenv("SUPABASE_SERVICE_KEY") or "placeholder-key"
+SUPABASE_URL = os.getenv("SUPABASE_URL") or "https://kvynvwxqwrtwmwmkmxak.supabase.co"
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SECRET_KEY") or os.getenv("SUPABASE_SERVICE_KEY") or "sb_publishable_jL2UiAjt9yo65QVyPk6EDA__fGBnOch"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+
 
 
 # Cloudinary

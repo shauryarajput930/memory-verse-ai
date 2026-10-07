@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+
 
 export default function AuthUI() {
   const [email, setEmail] = useState("");
@@ -17,7 +18,8 @@ export default function AuthUI() {
     let url =
       process.env.NEXT_PUBLIC_SITE_URL ||
       (typeof window !== "undefined" && window.location.origin ? window.location.origin : "") ||
-      "http://localhost:3000/";
+      "https://memory-verse-ai.netlify.app/";
+
 
     if (!url.startsWith("http://") && !url.startsWith("https://")) {
       url = `https://${url}`;
