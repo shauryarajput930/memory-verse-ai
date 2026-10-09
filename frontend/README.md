@@ -27,7 +27,7 @@ Create `.env.local` inside `frontend/`:
 NEXT_PUBLIC_SUPABASE_URL=https://your-supabase-url.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
 NEXT_PUBLIC_SITE_URL=https://memory-verse-ai.netlify.app
-NEXT_PUBLIC_API_URL=https://memory-verse-ai.onrender.com
+NEXT_PUBLIC_API_URL=https://memory-verse-ai-3yvh.onrender.com
 ```
 
 ## 🌐 Deployment (Netlify)

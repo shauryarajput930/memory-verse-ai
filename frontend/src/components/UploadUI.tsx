@@ -80,11 +80,17 @@ export default function UploadUI({ userId, onUploadSuccess }: { userId: string; 
 
       if (!res.ok) {
         let errorMessage = "Failed to upload document";
-        try {
-          const errData = await res.json();
-          if (errData.detail) errorMessage = errData.detail;
-        } catch {
-          // Keep default if JSON fails
+        if (res.status === 502 || res.status === 504) {
+          errorMessage = "Backend server is warming up or restarting (Render Cold Start). Please wait 15 seconds and click 'Add to Archive' again.";
+        } else if (res.status === 500) {
+          errorMessage = "Backend server encountered a memory or processing error. Please try again with a smaller file.";
+        } else {
+          try {
+            const errData = await res.json();
+            if (errData.detail) errorMessage = errData.detail;
+          } catch {
+            // Keep default if JSON fails
+          }
         }
         throw new Error(errorMessage);
       }

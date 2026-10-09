@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Edit2, Trash2, X } from "lucide-react";
 import { supabase } from "../lib/supabase";
-import { API_URL } from "@/lib/api";
+import { API_URL, getSafeFileUrl } from "@/lib/api";
 import { GlassDatePicker } from "./GlassDatePicker";
 
 interface DocumentRelationship {
@@ -467,7 +467,7 @@ export default function LibraryView({ userId }: LibraryViewProps) {
                     return (
                       <a
                         key={item.id}
-                        href={item.file_url || "#"}
+                        href={getSafeFileUrl(item.file_url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="spatial-glass-inner spatial-hover group relative p-4 flex gap-4 h-32"

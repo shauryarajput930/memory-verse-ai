@@ -72,3 +72,12 @@ begin
   limit match_count;
 end;
 $$;
+
+-- 6. User Profiles table
+create table if not exists profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  full_name text,
+  email text,
+  created_at timestamp default now(),
+  updated_at timestamp default now()
+);

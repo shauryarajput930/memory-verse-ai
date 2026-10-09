@@ -127,7 +127,7 @@ npm run dev
   - `NEXT_PUBLIC_SUPABASE_URL`
   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or `NEXT_PUBLIC_SUPABASE_ANON_KEY`)
   - `NEXT_PUBLIC_SITE_URL` (Set to your canonical Netlify production domain: `https://memory-verse-ai.netlify.app`)
-  - `NEXT_PUBLIC_API_URL` (Set to your Render backend URL, e.g. `https://memory-verse-ai.onrender.com`)
+  - `NEXT_PUBLIC_API_URL` (Set to your Render backend URL, e.g. `https://memory-verse-ai-3yvh.onrender.com`)
 
 ---
 

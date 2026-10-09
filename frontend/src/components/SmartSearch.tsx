@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
-import { API_URL } from "@/lib/api";
+import { API_URL, getSafeFileUrl } from "@/lib/api";
 
 interface MatchedDocument {
   id: string;
@@ -200,7 +200,7 @@ export default function SmartSearch({ userId }: { userId?: string }) {
               {docs.map((doc) => (
                 <a
                   key={doc.id}
-                  href={doc.file_url || "#"}
+                  href={getSafeFileUrl(doc.file_url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block p-4 spatial-glass-inner hover:bg-white/5 transition-all duration-300 group"

@@ -53,6 +53,7 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
     import io
     import os
     import shutil
+    import gc
     
     tesseract_available = False
     env_tesseract = os.getenv("TESSERACT_PATH")
@@ -68,27 +69,33 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
             tesseract_available = True
 
     text_parts = []
-    with fitz.open(stream=file_bytes, filetype="pdf") as doc:
-        for page in doc:
-            # 1. Extract standard text
-            page_text = page.get_text().strip()
-            if page_text:
-                text_parts.append(page_text)
-                
-            # 2. Extract images from the page and OCR them if tesseract is available
-            if tesseract_available:
-                image_list = page.get_images(full=True)
-                for img in image_list:
-                    xref = img[0]
-                    try:
-                        base_image = doc.extract_image(xref)
-                        image_bytes = base_image["image"]
-                        image = Image.open(io.BytesIO(image_bytes))
-                        img_text = pytesseract.image_to_string(image).strip()
-                        if img_text:
-                            text_parts.append(img_text)
-                    except Exception as e:
-                        print(f"Failed to OCR image in PDF: {e}")
+    ocr_count = 0
+    try:
+        with fitz.open(stream=file_bytes, filetype="pdf") as doc:
+            for page in doc:
+                page_text = page.get_text().strip()
+                if page_text:
+                    text_parts.append(page_text)
+                    
+                # Only perform heavy image OCR if page text is minimal and OCR count < 2
+                if tesseract_available and len(page_text) < 50 and ocr_count < 2:
+                    image_list = page.get_images(full=True)
+                    for img in image_list[:2]:
+                        xref = img[0]
+                        try:
+                            base_image = doc.extract_image(xref)
+                            image_bytes = base_image["image"]
+                            with Image.open(io.BytesIO(image_bytes)) as image:
+                                img_text = pytesseract.image_to_string(image).strip()
+                                if img_text:
+                                    text_parts.append(img_text)
+                            ocr_count += 1
+                        except Exception as e:
+                            print(f"Failed to OCR image in PDF: {e}")
+    except Exception as e:
+        print(f"PDF extraction warning: {e}")
+    finally:
+        gc.collect()
 
     return "\n".join(text_parts).strip()
 
@@ -132,16 +139,26 @@ async def extract_text_from_url(url: str) -> str:
 def upload_to_cloudinary(file_bytes: bytes, filename: str, file_ext: str) -> str:
     base_name = os.path.splitext(filename)[0]
     fmt = file_ext.lstrip(".").lower()
+    is_pdf = (fmt == "pdf")
     
     try:
-        upload_kwargs = {
-            "folder": "memoryverse",
-            "resource_type": "auto",
-            "public_id": base_name,
-            "overwrite": True,
-        }
-        if fmt:
-            upload_kwargs["format"] = fmt
+        if is_pdf:
+            # PDFs must use 'raw' resource_type to bypass Cloudinary image PDF ACL restrictions
+            upload_kwargs = {
+                "folder": "memoryverse",
+                "resource_type": "raw",
+                "public_id": f"{base_name}.pdf",
+                "overwrite": True,
+            }
+        else:
+            upload_kwargs = {
+                "folder": "memoryverse",
+                "resource_type": "image",
+                "public_id": base_name,
+                "overwrite": True,
+            }
+            if fmt:
+                upload_kwargs["format"] = fmt
 
         result = cloudinary.uploader.upload(file_bytes, **upload_kwargs)
         return result["secure_url"]
@@ -260,6 +277,9 @@ async def upload_document(
         relationships_found = len(relations)
     except Exception as e:
         print(f"Relationship discovery failed for {doc_id}: {e}")
+
+    import gc
+    gc.collect()
 
     return DocumentResponse(
         id=doc_id,

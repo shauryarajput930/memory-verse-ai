@@ -5,22 +5,43 @@ import { supabase } from "../lib/supabase";
 import { API_URL } from "@/lib/api";
 import { User, LogOut, FileText, Activity } from "lucide-react";
 
-export default function ProfileView({ userId, userEmail, onSignOut }: { userId: string; userEmail: string; onSignOut?: () => void }) {
+export default function ProfileView({ 
+  userId, 
+  userEmail, 
+  userName,
+  userAvatar,
+  onSignOut 
+}: { 
+  userId: string; 
+  userEmail: string; 
+  userName?: string;
+  userAvatar?: string | null;
+  onSignOut?: () => void 
+}) {
   const [stats, setStats] = useState({
     totalDocs: 0,
     categories: {} as Record<string, number>
   });
   const [loading, setLoading] = useState(true);
 
+  const displayName = userName || (userEmail ? userEmail.split('@')[0] : "User");
+
   useEffect(() => {
+    let isMounted = true;
     const fetchStats = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
         const res = await fetch(`${API_URL}/api/timeline/${userId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          method: "GET",
+          headers,
         });
+
+        if (!res.ok) throw new Error(`HTTP status ${res.status}`);
+
         const data = await res.json();
         const allItems = (data.timeline || []).flatMap((y: { items: Array<{ category?: string }> }) => y.items);
         
@@ -30,17 +51,25 @@ export default function ProfileView({ userId, userEmail, onSignOut }: { userId: 
           cats[c] = (cats[c] || 0) + 1;
         });
 
-        setStats({
-          totalDocs: allItems.length,
-          categories: cats
-        });
+        if (isMounted) {
+          setStats({
+            totalDocs: allItems.length,
+            categories: cats
+          });
+        }
       } catch (e) {
-        console.error(e);
+        if (process.env.NODE_ENV === "development") {
+          console.warn("Profile stats fetch notice:", e);
+        }
+        if (isMounted) {
+          setStats({ totalDocs: 0, categories: {} });
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
     fetchStats();
+    return () => { isMounted = false; };
   }, [userId]);
 
   const handleSignOut = () => {
@@ -61,15 +90,22 @@ export default function ProfileView({ userId, userEmail, onSignOut }: { userId: 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* User Card */}
         <div className="md:col-span-1 spatial-glass p-6 sm:p-8 flex flex-col items-center justify-center text-center">
-          <div className="w-24 h-24 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(255,255,255,0.1)]">
-            <User className="w-10 h-10 text-white/50" />
+          <div className="w-24 h-24 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center mb-5 shadow-[0_0_30px_rgba(255,255,255,0.15)] overflow-hidden relative">
+            {userAvatar ? (
+              <img src={userAvatar} alt={displayName} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
+                <span className="text-3xl font-black text-white uppercase">{displayName.charAt(0)}</span>
+              </div>
+            )}
           </div>
-          <h3 className="text-xl font-bold text-white mb-1 truncate w-full">{userEmail}</h3>
-          <p className="text-xs text-white/40 mb-8 uppercase tracking-widest font-medium">MemoryVerse Architect</p>
+          <h3 className="text-xl font-bold text-white mb-1 truncate w-full" title={displayName}>{displayName}</h3>
+          <p className="text-xs text-white/50 mb-2 truncate w-full" title={userEmail}>{userEmail}</p>
+          <p className="text-[10px] text-blue-400/90 mb-8 uppercase tracking-widest font-semibold">MemoryVerse Architect</p>
           
           <button 
             onClick={handleSignOut}
-            className="w-full py-3 spatial-glass-inner text-red-400 hover:text-red-300 hover:bg-red-400/10 transition-colors rounded-xl font-medium flex items-center justify-center gap-2"
+            className="w-full py-3 spatial-glass-inner text-red-400 hover:text-red-300 hover:bg-red-400/10 transition-colors rounded-xl font-medium flex items-center justify-center gap-2 cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             Sign Out

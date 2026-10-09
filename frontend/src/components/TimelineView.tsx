@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabase";
-import { API_URL } from "@/lib/api";
+import { API_URL, getSafeFileUrl } from "@/lib/api";
 import { GlassDatePicker } from "./GlassDatePicker";
 import { Edit2, Trash2, X, ChevronDown } from "lucide-react";
 
@@ -88,6 +88,7 @@ function ModalSelect({ value, onChange, options }: { value: string, onChange: (v
 export default function TimelineView({ userId, refreshTrigger = 0 }: { userId: string; refreshTrigger?: number }) {
   const [timeline, setTimeline] = useState<TimelineYear[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [editingItem, setEditingItem] = useState<TimelineItem | null>(null);
   const [editForm, setEditForm] = useState({ title: "", category: "", summary: "", event_date: "" });
@@ -97,17 +98,28 @@ export default function TimelineView({ userId, refreshTrigger = 0 }: { userId: s
   const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchTimeline = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    
+    setLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
       const res = await fetch(`${API_URL}/api/timeline/${userId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        method: "GET",
+        headers,
       });
+      if (!res.ok) throw new Error(`HTTP status ${res.status}`);
+
       const data = await res.json();
       setTimeline(data.timeline || []);
+      setError(null);
     } catch (err) {
-      console.error("Failed to fetch timeline:", err);
+      if (process.env.NODE_ENV === "development") {
+        console.warn("Backend API service notice:", err);
+      }
+      setTimeline([]);
+      setError("Backend API is currently offline. Please verify server connection.");
     } finally {
       setLoading(false);
     }
@@ -116,17 +128,31 @@ export default function TimelineView({ userId, refreshTrigger = 0 }: { userId: s
   useEffect(() => {
     let isMounted = true;
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
         const res = await fetch(`${API_URL}/api/timeline/${userId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          method: "GET",
+          headers,
         });
+        if (!res.ok) throw new Error(`HTTP status ${res.status}`);
+
         const data = await res.json();
-        if (isMounted) setTimeline(data.timeline || []);
+        if (isMounted) {
+          setTimeline(data.timeline || []);
+          setError(null);
+        }
       } catch (err) {
-        console.error("Failed to fetch timeline:", err);
+        if (process.env.NODE_ENV === "development") {
+          console.warn("Backend API service notice:", err);
+        }
+        if (isMounted) {
+          setTimeline([]);
+          setError("Backend API service is currently unreachable.");
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -206,11 +232,25 @@ export default function TimelineView({ userId, refreshTrigger = 0 }: { userId: s
 
   if (timeline.length === 0) {
     return (
-      <div className="text-center py-20 animate-in">
-        <h3 className="text-2xl font-semibold mb-3 text-white">Your timeline is empty.</h3>
-        <p className="text-white/50 max-w-md mx-auto">
-          Upload documents to watch your spatial timeline populate automatically.
-        </p>
+      <div className="text-center py-16 animate-in">
+        {error ? (
+          <div className="max-w-md mx-auto p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm flex flex-col items-center gap-3">
+            <span className="font-medium">{error}</span>
+            <button 
+              onClick={fetchTimeline} 
+              className="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+            >
+              Retry Connection
+            </button>
+          </div>
+        ) : (
+          <>
+            <h3 className="text-2xl font-semibold mb-3 text-white">Your timeline is empty.</h3>
+            <p className="text-white/50 max-w-md mx-auto">
+              Upload documents to watch your spatial timeline populate automatically.
+            </p>
+          </>
+        )}
       </div>
     );
   }
@@ -244,7 +284,7 @@ export default function TimelineView({ userId, refreshTrigger = 0 }: { userId: s
                 {yearGroup.items.map((item) => (
                   <a
                     key={item.id}
-                    href={item.file_url || "#"}
+                    href={getSafeFileUrl(item.file_url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex flex-col p-4 sm:p-5 spatial-glass-inner spatial-hover group relative overflow-hidden"

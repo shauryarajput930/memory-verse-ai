@@ -19,6 +19,7 @@ export default function Home() {
   const [activeView, setActiveView] = useState<"home" | "library" | "profile">("home");
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [welcomeModal, setWelcomeModal] = useState<{ show: boolean; isNewUser: boolean; userName: string } | null>(null);
 
   const handleNav = (view: "home" | "library" | "profile") => {
     setActiveView(view);
@@ -38,6 +39,40 @@ export default function Home() {
       setShowSignOutModal(false);
     }
   };
+
+  useEffect(() => {
+    if (!session) return;
+    const user = session.user;
+    const sessionKey = `welcome_shown_${user.id}`;
+
+    if (typeof window !== "undefined" && !sessionStorage.getItem(sessionKey)) {
+      const storedType = localStorage.getItem("memoryverse_welcome_type");
+      const storedName = localStorage.getItem("memoryverse_user_name");
+
+      const metadata = user.user_metadata || {};
+      const nameToDisplay = 
+        storedName || 
+        metadata.full_name || 
+        metadata.name || 
+        metadata.user_name || 
+        metadata.preferred_username || 
+        (user.email ? user.email.split("@")[0] : "User");
+
+      const createdAtTime = new Date(user.created_at).getTime();
+      const isRecentlyCreated = (Date.now() - createdAtTime) < 25000;
+      const isNew = storedType === "new" || isRecentlyCreated;
+
+      setWelcomeModal({
+        show: true,
+        isNewUser: isNew,
+        userName: nameToDisplay,
+      });
+
+      sessionStorage.setItem(sessionKey, "true");
+      localStorage.removeItem("memoryverse_welcome_type");
+      localStorage.removeItem("memoryverse_user_name");
+    }
+  }, [session]);
 
   useEffect(() => {
     let isMounted = true;
@@ -99,6 +134,14 @@ export default function Home() {
 
   const userId = session.user.id;
   const userEmail = session.user.email || "";
+  const metadata = session.user.user_metadata || {};
+  const userName = 
+    metadata.full_name || 
+    metadata.name || 
+    metadata.user_name || 
+    metadata.preferred_username || 
+    (userEmail ? userEmail.split('@')[0] : "User");
+  const userAvatar = metadata.avatar_url || metadata.picture || null;
 
   return (
     <main className="min-h-screen">
@@ -123,14 +166,22 @@ export default function Home() {
             
             {/* User Profile / Sign Out */}
             <div className="flex items-center md:pl-4 md:border-l border-white/10">
-              <button onClick={() => handleNav("profile")} className={`w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center mr-3 transition-colors ${activeView === "profile" ? "ring-2 ring-white/50" : ""}`}>
-                <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+              <button 
+                onClick={() => handleNav("profile")} 
+                className={`w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center mr-3 transition-colors overflow-hidden ${activeView === "profile" ? "ring-2 ring-white/50" : ""}`}
+                title={userName}
+              >
+                {userAvatar ? (
+                  <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="font-bold text-xs text-white uppercase">{userName.charAt(0)}</span>
+                )}
               </button>
               <button 
                 onClick={() => handleNav("profile")} 
-                className={`text-xs mr-4 hidden md:block max-w-[150px] lg:max-w-none truncate hover:text-white transition-colors cursor-pointer ${activeView === "profile" ? "text-white" : ""}`}
+                className={`text-xs mr-4 hidden md:block max-w-[150px] lg:max-w-none truncate hover:text-white transition-colors cursor-pointer ${activeView === "profile" ? "text-white font-medium" : ""}`}
               >
-                {userEmail}
+                {userName}
               </button>
               <button 
                 onClick={() => setShowSignOutModal(true)} 
@@ -155,7 +206,11 @@ export default function Home() {
             <span className="text-[10px] font-medium tracking-wide">Library</span>
           </button>
           <button onClick={() => handleNav("profile")} className={`flex flex-col items-center justify-center w-full h-full transition-colors ${activeView === "profile" ? "text-white" : "text-white/40"}`}>
-            <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+            {userAvatar ? (
+              <img src={userAvatar} alt={userName} className={`w-5 h-5 rounded-full object-cover mb-1 border ${activeView === "profile" ? "border-white" : "border-white/40"}`} />
+            ) : (
+              <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+            )}
             <span className="text-[10px] font-medium tracking-wide">Profile</span>
           </button>
         </div>
@@ -203,7 +258,7 @@ export default function Home() {
         ) : activeView === "library" ? (
           <LibraryView userId={userId} />
         ) : (
-          <ProfileView userId={userId} userEmail={userEmail} onSignOut={() => setShowSignOutModal(true)} />
+          <ProfileView userId={userId} userEmail={userEmail} userName={userName} userAvatar={userAvatar} onSignOut={() => setShowSignOutModal(true)} />
         )}
       </div>
 
@@ -244,6 +299,50 @@ export default function Home() {
                   {isSigningOut ? "Signing Out..." : "Sign Out"}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Welcome / Onboarding Modal ───────────────────────────────── */}
+      {welcomeModal?.show && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[9999] overflow-y-auto custom-scrollbar">
+          <div className="min-h-full flex items-center justify-center p-4">
+            <div 
+              className="fixed inset-0 bg-black/75 backdrop-blur-md" 
+              onClick={() => setWelcomeModal(null)}
+            ></div>
+            <div className="relative z-10 spatial-glass bg-[#0A0A0F]/95 w-full max-w-md p-8 sm:p-10 rounded-3xl border border-white/15 shadow-[0_20px_60px_rgba(0,0,0,0.6)] animate-in fade-in zoom-in-95 text-center">
+              {welcomeModal.isNewUser ? (
+                <>
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-emerald-500/20 to-teal-500/30 border border-emerald-400/30 flex items-center justify-center mx-auto mb-5 shadow-[0_0_30px_rgba(16,185,129,0.25)]">
+                    <span className="text-3xl">🎉</span>
+                  </div>
+                  <h3 className="text-2xl font-black text-white mb-3 tracking-tight">Congratulations!</h3>
+                  <p className="text-sm sm:text-base text-white/80 mb-8 leading-relaxed">
+                    Congratulations, <span className="text-emerald-400 font-bold">{welcomeModal.userName}</span>! Your account has been successfully created.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/30 border border-blue-400/30 flex items-center justify-center mx-auto mb-5 shadow-[0_0_30px_rgba(59,130,246,0.25)]">
+                    <span className="text-3xl">✨</span>
+                  </div>
+                  <h3 className="text-2xl font-black text-white mb-3 tracking-tight">Welcome Back!</h3>
+                  <p className="text-sm sm:text-base text-white/80 mb-8 leading-relaxed">
+                    Welcome back, <span className="text-blue-400 font-bold">{welcomeModal.userName}</span>! Glad to see you again.
+                  </p>
+                </>
+              )}
+
+              <button 
+                type="button"
+                onClick={() => setWelcomeModal(null)}
+                className="w-full py-3.5 text-sm font-bold bg-white text-[#0A0A0F] rounded-xl hover:bg-gray-200 transition-all shadow-lg shadow-white/10 active:scale-[0.98] cursor-pointer"
+              >
+                {welcomeModal.isNewUser ? "Explore Workspace" : "Go to Dashboard"}
+              </button>
             </div>
           </div>
         </div>,

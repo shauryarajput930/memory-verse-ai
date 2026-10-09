@@ -7,16 +7,17 @@ flowchart TD
     %% Actors
     User([User])
     
-    %% Next.js Frontend
-    subgraph Frontend [Next.js Client]
-        UI[Upload UI / Timeline / Smart Search / Pre-Upload Preview]
-        AuthGuard[JWT Auth Layer]
+    %% Next.js Frontend (Netlify)
+    subgraph Frontend [Next.js Client — Netlify]
+        UI[Upload UI / Timeline / Smart Search / Library / Profile]
+        AuthGuard[Supabase Auth & JWT Layer]
     end
 
-    %% FastAPI Backend Core
-    subgraph Backend [FastAPI Backend]
-        Auth[JWT Dependency]
-        Ingest[ingestion.py / analyze-preview]
+    %% FastAPI Backend Core (Render)
+    subgraph Backend [FastAPI Backend — Render Docker]
+        Auth[JWT & Session Dependency]
+        Ingest[ingestion.py / archive / github-sync]
+        AuthRouter[auth.py / register / me / verify]
         Cat[categorization.py]
         Rel[relationships.py]
         Time[timeline.py]
@@ -28,14 +29,15 @@ flowchart TD
         OCR[PyMuPDF / PyTesseract OCR]
         Cloudinary[(Cloudinary Storage)]
         Groq[Groq API: llama-3.3-70b-versatile]
-        Embed[HF MiniLM Local]
+        Embed[HF MiniLM Local Embedding]
         GitHubAPI[GitHub REST API]
     end
 
     %% Database
-    subgraph Database [Supabase]
+    subgraph Database [Supabase PostgreSQL]
         Docs[(Documents Table)]
         Rels[(Relationships Table)]
+        Profiles[(Profiles Table)]
         pgvector[(pgvector Extension)]
     end
 
@@ -45,7 +47,9 @@ flowchart TD
     AuthGuard -->|Bearer Token| Auth
     
     Auth -->|Validated| Ingest
-    UI -->|Instant Preview Trigger| Ingest
+    UI -->|Registration / Profile Sync| AuthRouter
+    AuthRouter -->|Upsert User Profile| Profiles
+    
     Ingest -->|Raw File| OCR
     OCR -->|Extracted Text| Ingest
     Ingest -->|File Bytes| Cloudinary
@@ -83,17 +87,20 @@ flowchart TD
 
 When a user interacts with the application, their request is routed through a modern decoupled pipeline:
 
-1. **Authentication:** All requests from the Next.js client hit the JWT Auth layer first. The FastAPI backend validates this token globally to ensure endpoints are gated and user data remains isolated. Authentication redirects (OAuth & magic link) use dynamic origin resolution (`NEXT_PUBLIC_SITE_URL` / `window.location.origin`) to avoid invalid preview deployment redirects.
-2. **Pre-Upload AI Auto-Detect (`analyze-preview`):** Dropping a file or link triggers `/api/documents/analyze-preview`. Text is extracted via `PyMuPDF` / `PyTesseract`, combined with filename context, and sent to **Groq LLM** (`llama-3.3-70b-versatile`). The pre-upload drawer instantly pre-fills the **Summary Section**, Title, Category pills, and Event Date.
-3. **Ingestion & Extraction (`ingestion.py`):** When the user submits "Add to Archive", `ingestion.py` uploads source assets to **Cloudinary** for permanent cloud storage (preserving PDF formats without `.pdf.pdf` extension bugs) and stores document metadata into **Supabase**.
-4. **Categorization & Structuring (`categorization.py`):** The raw text and user pre-upload overrides are processed by `categorization.py`. If the user customized the summary, title, or category in the UI drawer, those overrides take priority over AI defaults.
-5. **Vector Embeddings (`embeddings.py`):** The processed document text is run through a local HuggingFace `sentence-transformer` model (`all-MiniLM-L6-v2`) to generate a 384-dimensional semantic embedding vector. The model is lazy-loaded on demand to keep initial container memory under 120 MB.
+1. **Authentication & Profile Registration:** All requests from the Next.js client hit Supabase Auth & JWT validation first. When a user creates an account, their **Full Name** and email are saved into `auth.users` metadata and synced to the `profiles` table via `/api/auth/register`. Authentication redirects (OAuth & email confirmation) use dynamic origin resolution (`NEXT_PUBLIC_SITE_URL` / `window.location.origin`) targeting the canonical Netlify domain (`https://memory-verse-ai.netlify.app`).
+2. **Dynamic Onboarding & On-Screen Notifications:** 
+   - First-time registrations trigger a **"Congratulations, [User Name]!"** modal.
+   - Returning user logins trigger a **"Welcome Back, [User Name]!"** modal.
+   - Clicking "Continue with Google" shows an interactive **"Google Login is coming soon!"** toast notification.
+3. **Direct File Ingestion & Auto-Fill (`ingestion.py`):** Dropping a file automatically uses the filename as title for instant archive creation. PyMuPDF / PyTesseract extracts raw text, uploads source assets to **Cloudinary**, and saves document metadata into **Supabase**.
+4. **Categorization & Structuring (`categorization.py`):** The raw text is processed by `categorization.py` using **Groq LLM** (`llama-3.3-70b-versatile` with fallbacks) to determine category pills (*Projects, Skills, Certifications, Internships, Achievements, Academics*) and event dates.
+5. **Vector Embeddings (`embeddings.py`):** Processed document text is run through a local HuggingFace `sentence-transformer` model (`all-MiniLM-L6-v2`) to generate a 384-dimensional semantic embedding vector. The model is lazy-loaded on demand to keep container memory under 120 MB on Render.
 6. **Relationship Engine (`relationships.py`):** Once saved in Supabase, `relationships.py` performs a similarity search using `pgvector`. It feeds potential matches to Groq for logical verification. Confirmed connections are indexed into the `relationships` table.
 7. **Retrieval (`timeline.py` & `search.py`):** The Next.js frontend fetches processed data via `timeline.py` (chronological sorting) and `search.py` (cosine-similarity matching against `pgvector`).
 
 ## Why These Choices?
 
-- **Supabase + pgvector (vs. separate vector database):** Combines standard relational data (document metadata, user IDs) alongside vector embeddings in a single PostgreSQL instance, avoiding synchronization overhead.
-- **Groq `llama-3.3-70b-versatile` (vs. OpenAI/Anthropic):** Groq's ultra-fast LPU inference endpoints deliver sub-second JSON generation for instant pre-upload summary reading and relationship verification.
+- **Supabase + pgvector (vs. separate vector database):** Combines standard relational data (document metadata, user profiles) alongside vector embeddings in a single PostgreSQL instance.
+- **Groq `llama-3.3-70b-versatile` (vs. OpenAI/Anthropic):** Groq's ultra-fast LPU inference endpoints deliver sub-second JSON generation for instant document categorization and relationship verification.
 - **Local Lazy Embeddings (MiniLM) (vs. API embeddings):** Generates 384D embeddings locally via HuggingFace `sentence-transformers`, lazy-loaded on demand to fit within Render Free Tier RAM limits (512 MB).
 
