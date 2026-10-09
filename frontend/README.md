@@ -4,7 +4,8 @@ Modern Glassmorphic Spatial UI for **MemoryVerse AI**, developed by **Shaurya Ra
 
 ## 🚀 Features
 
-- **Instant Pre-Upload AI Preview:** Auto-detects certificate summaries, titles, categories, and dates.
+- **Direct Instant Upload:** Auto-sets document title to the uploaded file name with instant submission.
+- **Glassmorphic Sign-Out Confirmation:** Modal popup preventing accidental logouts.
 - **Glassmorphic Custom Delete Modal:** Custom confirmation modal replacing native browser popups.
 - **GitHub Sync & OAuth Auth:** Powered by Supabase Auth with Google & GitHub provider support.
 - **Spatial 3D Timeline & Smart Voice Search:** Interactive timeline rendering and natural language query search.
@@ -25,14 +26,15 @@ Create `.env.local` inside `frontend/`:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-supabase-url.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+NEXT_PUBLIC_SITE_URL=https://memory-verse-ai.netlify.app
+NEXT_PUBLIC_API_URL=https://memory-verse-ai.onrender.com
 ```
 
-## 🌐 Deployment (Vercel)
+## 🌐 Deployment (Netlify)
 
-When deploying to Vercel:
+When deploying to Netlify:
 - **Root Directory**: `frontend`
 - **Framework**: `Next.js`
-- Set `NEXT_PUBLIC_SITE_URL` to your production domain (`https://memory-verse-ai-gray.vercel.app`) to ensure auth redirects return to the active production deployment.
+- Set `NEXT_PUBLIC_SITE_URL` to your production domain (`https://memory-verse-ai.netlify.app`) to ensure auth redirects return to the active production deployment.
+
 

@@ -8,9 +8,10 @@ MemoryVerse AI is a modern, full-stack spatial identity system built by **Shaury
 
 ## 🌟 Key Features
 
-- **⚡ Instant AI Certificate Auto-Read & Summary:** Drag & drop any certificate (PDF/PNG/JPG) or paste a link to trigger instant AI analysis (`/api/documents/analyze-preview`). Automatically reads certificate text and populates the **Summary Section**, Title, Category, and Event Date before saving.
-- **✏️ Customize Details Before Archive:** Interactive glassmorphism drawer allowing users to customize document titles, select visual category pills (*Projects, Skills, Certifications, Internships, Achievements, Academics*), pick event dates, and refine AI summaries with a live **Re-Detect** option.
-- **🗑️ Glassmorphic Confirmation Modal:** Custom animated glassmorphism delete modal replaces generic browser popups for safe document removal.
+- **⚡ Instant File Archive & Auto-Fill:** Upload any document or certificate (PDF/PNG/JPG). File name is automatically assigned as the document title for direct instant submission.
+- **🚪 Sign Out Confirmation Modal:** Custom glassmorphism confirmation modal preventing accidental sign-outs.
+- **✏️ Post-Upload Inline Edit:** Seamlessly edit document titles, categories (*Projects, Skills, Certifications, Internships, Achievements, Academics*), dates, and summaries after document archiving.
+- **🗑️ Glassmorphic Confirmation Modal:** Custom animated glassmorphism delete modal for safe document removal.
 - **🐙 GitHub Repository Auto-Sync:** Type any GitHub username to automatically pull top public repositories into your spatial portfolio with AI categorization and relationship discovery.
 - **🏷️ Intelligent Auto-Categorization:** Uses Groq LLM inference (`llama-3.3-70b-versatile`) with fallbacks (`llama-3.1-8b-instant`, `mixtral-8x7b-32768`, `gemma2-9b-it`) to parse document text into structured metadata.
 - **🔗 Knowledge Graph & Relationship Engine:** Automatically discovers semantic connections between documents using pgvector cosine similarity and LLM verification.
@@ -23,8 +24,8 @@ MemoryVerse AI is a modern, full-stack spatial identity system built by **Shaury
 
 ## 🛠️ Tech Stack
 
-- **Frontend:** Next.js 16 (App Router, React 19, Tailwind CSS, Lucide Icons, Glassmorphic Design System)
-- **Backend:** FastAPI (Python 3.11/3.13), Uvicorn, Pydantic, PyMuPDF, PyTesseract
+- **Frontend:** Next.js 16 (App Router, React 19, Tailwind CSS, Lucide Icons, Glassmorphic Design System) — Deployed on **Netlify**
+- **Backend:** FastAPI (Python 3.11/3.13), Uvicorn, Pydantic, PyMuPDF, PyTesseract — Deployed on **Render**
 - **Database & Auth:** Supabase (PostgreSQL with `pgvector` extension & Supabase Auth)
 - **AI & Inference:** Groq API (`llama-3.3-70b-versatile`), HuggingFace `sentence-transformers` (`all-MiniLM-L6-v2`)
 - **Cloud Media:** Cloudinary API
@@ -71,7 +72,7 @@ GROQ_API_KEY=gsk_your_groq_api_key
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_cloudinary_api_key
 CLOUDINARY_API_SECRET=your_cloudinary_api_secret
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=https://memory-verse-ai.netlify.app
 ```
 
 Start the FastAPI server:
@@ -94,8 +95,8 @@ Create `.env.local` inside `frontend/`:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-supabase-url.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+NEXT_PUBLIC_SITE_URL=https://memory-verse-ai.netlify.app
+NEXT_PUBLIC_API_URL=https://memory-verse-ai.onrender.com
 ```
 
 Start Next.js dev server:
@@ -116,17 +117,17 @@ npm run dev
   - `SUPABASE_URL`, `SUPABASE_SECRET_KEY`
   - `GROQ_API_KEY`
   - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
-  - `FRONTEND_URL` (Set to your Vercel production domain: `https://memory-verse-ai-gray.vercel.app`)
+  - `FRONTEND_URL` (Set to your Netlify production domain: `https://memory-verse-ai.netlify.app`)
 
-### B. Vercel (Next.js Frontend)
+### B. Netlify (Next.js Frontend)
 - **Framework**: `Next.js`
 - **Root Directory**: `frontend`
 - **Build Command**: `npm run build`
 - **Environment Variables**:
   - `NEXT_PUBLIC_SUPABASE_URL`
   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or `NEXT_PUBLIC_SUPABASE_ANON_KEY`)
-  - `NEXT_PUBLIC_SITE_URL` (Set to your canonical Vercel production domain: `https://memory-verse-ai-gray.vercel.app`)
-  - `NEXT_PUBLIC_API_URL` (Set to your Render backend URL, e.g. `https://memoryverse-api.onrender.com`)
+  - `NEXT_PUBLIC_SITE_URL` (Set to your canonical Netlify production domain: `https://memory-verse-ai.netlify.app`)
+  - `NEXT_PUBLIC_API_URL` (Set to your Render backend URL, e.g. `https://memory-verse-ai.onrender.com`)
 
 ---
 
@@ -134,8 +135,8 @@ npm run dev
 
 To enable Google Login or GitHub Login:
 1. Go to your **Supabase Dashboard** -> **Authentication** -> **URL Configuration**.
-2. Set **Site URL** to your production domain (`https://memory-verse-ai-gray.vercel.app`).
-3. Add `https://memory-verse-ai-gray.vercel.app/*` and `http://localhost:3000/*` to **Redirect URLs**.
+2. Set **Site URL** to your production domain (`https://memory-verse-ai.netlify.app`).
+3. Add `https://memory-verse-ai.netlify.app/**` and `http://localhost:3000/**` to **Redirect URLs**.
 4. Go to **Authentication** -> **Providers**, select **Google** (or GitHub), and toggle **Enable Provider**.
 5. Paste your **Client ID** and **Client Secret** obtained from Google Cloud Console / GitHub Developer Settings.
 
