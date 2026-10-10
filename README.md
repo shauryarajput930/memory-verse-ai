@@ -10,11 +10,15 @@ MemoryVerse AI is a modern, full-stack spatial identity system built by **Shaury
 
 - **⚡ Instant File Archive & Auto-Fill:** Upload any document or certificate (PDF/PNG/JPG). File name is automatically assigned as the document title for direct instant submission.
 - **👤 Profile & Identity Customization:** Edit and update your Full Name directly inside the Profile section with instant, real-time reflection across the top navigation bar and dashboard without requiring a page refresh.
-- **🔐 Complete Password Management:** 
+- **🔐 Conditional Password Management:** 
+  - **Email & Password Accounts:** Dedicated "Security & Password" card inside Profile & Settings with live validation and visibility toggles (`Eye` / `EyeOff`).
+  - **OAuth Accounts (Google / GitHub):** Protected with an "OAuth Secured" security badge—password changes are securely managed directly by the identity provider.
   - **Forgot Password Flow:** Self-service email recovery link dispatch via Supabase Auth from the Sign In view.
-  - **Change Password:** Dedicated "Security & Password" card inside Profile & Settings for logged-in users with client-side length and match validation.
   - **Set New Password Modal:** Automatic recovery detection when following email reset links.
-  - **Password Visibility Toggles:** Clean eye icon (`Eye` / `EyeOff`) toggles for effortless verification.
+- **🚀 Redis Caching Layer (1-Hour TTL):** 
+  - Caches frequent RAG search and vector retrieval queries in Redis with a 1-hour expiration time (`REDIS_CACHE_TTL=3600`).
+  - Automatic cache invalidation when users upload, edit, or delete documents.
+  - Graceful degradation with circuit-breaker: if Redis is unreachable, queries seamlessly fall back to Supabase + Groq without errors or latency penalties.
 - **🚪 Sign Out Confirmation Modal:** Custom glassmorphism confirmation modal preventing accidental sign-outs.
 - **✏️ Post-Upload Inline Edit:** Seamlessly edit document titles, categories (*Projects, Skills, Certifications, Internships, Achievements, Academics*), dates, and summaries after document archiving.
 - **🗑️ Glassmorphic Confirmation Modal:** Custom animated glassmorphism delete modal for safe document removal.
@@ -33,6 +37,7 @@ MemoryVerse AI is a modern, full-stack spatial identity system built by **Shaury
 
 - **Frontend:** Next.js 16 (App Router, React 19, Tailwind CSS, Lucide Icons, Glassmorphic Design System) — Deployed on **Netlify**
 - **Backend:** FastAPI (Python 3.11/3.13), Uvicorn, Pydantic, PyMuPDF, PyTesseract — Deployed on **Render**
+- **Cache & Performance:** Redis (Redis Cloud / Upstash / Local) via Python `redis` client with 1-hour TTL and graceful degradation
 - **Database & Auth:** Supabase (PostgreSQL with `pgvector` extension & Supabase Auth)
 - **AI & Inference:** Groq API (`llama-3.3-70b-versatile`), HuggingFace `sentence-transformers` (`all-MiniLM-L6-v2`)
 - **Cloud Media:** Cloudinary API
@@ -80,6 +85,14 @@ CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_cloudinary_api_key
 CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 FRONTEND_URL=https://memory-verse-ai.netlify.app
+
+# Redis Caching (Supports Redis Cloud, Upstash, or Local)
+REDIS_URL=redis://default:password@host:port
+REDIS_CACHE_TTL=3600
+# Alternatively:
+# REDIS_HOST=your-redis-host
+# REDIS_PORT=6379
+# REDIS_PASSWORD=your-redis-password
 ```
 
 Start the FastAPI server:
@@ -125,6 +138,8 @@ npm run dev
   - `GROQ_API_KEY`
   - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
   - `FRONTEND_URL` (Set to your Netlify production domain: `https://memory-verse-ai.netlify.app`)
+  - `REDIS_URL` (Redis Cloud / Upstash connection URL)
+  - `REDIS_CACHE_TTL` (Optional: defaults to 3600 seconds)
 
 ### B. Netlify (Next.js Frontend)
 - **Framework**: `Next.js`

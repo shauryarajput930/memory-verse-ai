@@ -40,6 +40,8 @@ app.include_router(auth.router)
 
 
 
+from services.cache import cache_service
+
 @app.get("/")
 @app.head("/")
 def read_root():
@@ -54,6 +56,21 @@ def read_root():
 @app.options("/api/health")
 @app.get("/api/ping")
 def health_check():
-    return {"status": "ok", "service": "memory-verse-ai-backend"}
+    return {
+        "status": "ok", 
+        "service": "memory-verse-ai-backend",
+        "redis": "connected" if cache_service.is_healthy() else "offline (degraded)"
+    }
+
+
+@app.get("/api/cache/status")
+def cache_status():
+    healthy = cache_service.is_healthy()
+    return {
+        "redis_connected": healthy,
+        "mode": "cache_hit" if healthy else "graceful_degradation",
+        "default_ttl_seconds": cache_service.default_ttl,
+        "detail": "Redis is operational." if healthy else "Redis is offline or unreachable; requests bypass cache directly to database/LLM without error."
+    }
 
 

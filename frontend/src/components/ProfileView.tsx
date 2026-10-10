@@ -10,6 +10,8 @@ export default function ProfileView({
   userEmail, 
   userName, 
   userAvatar, 
+  isPasswordUser = true,
+  authProvider = "email",
   onSignOut, 
   onNameUpdated 
 }: { 
@@ -17,6 +19,8 @@ export default function ProfileView({
   userEmail: string; 
   userName?: string; 
   userAvatar?: string | null; 
+  isPasswordUser?: boolean;
+  authProvider?: string;
   onSignOut?: () => void; 
   onNameUpdated?: (newName: string) => void; 
 }) {
@@ -358,134 +362,160 @@ export default function ProfileView({
             )}
           </div>
 
-          {/* Security & Password Card */}
+          {/* Security & Authentication Card */}
           <div className="spatial-glass p-6 sm:p-8 flex flex-col">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <Shield className="w-5 h-5 text-emerald-400" />
-                Security & Password
+                Security & Authentication
               </h3>
-              {!isChangingPassword && (
-                <button
-                  onClick={() => {
-                    setIsChangingPassword(true);
-                    setPasswordError(null);
-                    setPasswordSuccess(false);
-                  }}
-                  className="px-3 py-1.5 spatial-glass-inner text-white/80 hover:text-white hover:bg-white/10 transition-colors rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer border border-white/10"
-                >
-                  <KeyRound className="w-3.5 h-3.5 text-blue-400" />
-                  Change Password
-                </button>
+              {isPasswordUser ? (
+                !isChangingPassword && (
+                  <button
+                    onClick={() => {
+                      setIsChangingPassword(true);
+                      setPasswordError(null);
+                      setPasswordSuccess(false);
+                    }}
+                    className="px-3 py-1.5 spatial-glass-inner text-white/80 hover:text-white hover:bg-white/10 transition-colors rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer border border-white/10"
+                  >
+                    <KeyRound className="w-3.5 h-3.5 text-blue-400" />
+                    Change Password
+                  </button>
+                )
+              ) : (
+                <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold rounded-lg uppercase tracking-wider">
+                  {authProvider.toUpperCase()} SECURED
+                </span>
               )}
             </div>
-            <p className="text-xs text-white/50 mb-6">Manage your account credentials and password protection</p>
+            <p className="text-xs text-white/50 mb-6">Manage your account authentication and credentials</p>
 
-            {passwordSuccess && (
-              <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs rounded-xl flex items-center gap-2 font-medium animate-in fade-in">
-                <Check className="w-4 h-4 shrink-0" />
-                Password changed successfully! Your new password is now active.
-              </div>
-            )}
-
-            {isChangingPassword ? (
-              <form onSubmit={handleUpdatePassword} className="space-y-4 p-5 bg-white/5 border border-white/10 rounded-2xl animate-in fade-in">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-white/70 uppercase tracking-wider mb-1.5">
-                      New Password
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showNewPassword ? "text" : "password"}
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        disabled={passwordLoading}
-                        required
-                        placeholder="Min 6 characters"
-                        className="w-full spatial-glass-inner px-3.5 py-2.5 pr-10 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-white/30 transition-all text-sm rounded-xl"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors cursor-pointer p-1"
-                        tabIndex={-1}
-                        aria-label={showNewPassword ? "Hide password" : "Show password"}
-                      >
-                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
+            {isPasswordUser ? (
+              <>
+                {passwordSuccess && (
+                  <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs rounded-xl flex items-center gap-2 font-medium animate-in fade-in">
+                    <Check className="w-4 h-4 shrink-0" />
+                    Password changed successfully! Your new password is now active.
                   </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-white/70 uppercase tracking-wider mb-1.5">
-                      Confirm Password
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showNewPassword ? "text" : "password"}
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        disabled={passwordLoading}
-                        required
-                        placeholder="Re-enter password"
-                        className="w-full spatial-glass-inner px-3.5 py-2.5 pr-10 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-white/30 transition-all text-sm rounded-xl"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {passwordError && (
-                  <p className="text-xs text-red-400 font-medium">{passwordError}</p>
                 )}
 
-                <div className="flex gap-2 justify-end pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsChangingPassword(false);
-                      setPasswordError(null);
-                      setNewPassword("");
-                      setConfirmPassword("");
-                    }}
-                    disabled={passwordLoading}
-                    className="px-4 py-2 text-xs font-medium text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={passwordLoading || !newPassword || !confirmPassword}
-                    className="px-5 py-2 text-xs font-semibold text-[#0B0D17] bg-white hover:bg-gray-200 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
-                  >
-                    {passwordLoading ? (
-                      <div className="w-3.5 h-3.5 border-2 border-black/20 border-t-black rounded-full animate-spin"></div>
-                    ) : (
-                      <Lock className="w-3.5 h-3.5" />
+                {isChangingPassword ? (
+                  <form onSubmit={handleUpdatePassword} className="space-y-4 p-5 bg-white/5 border border-white/10 rounded-2xl animate-in fade-in">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-white/70 uppercase tracking-wider mb-1.5">
+                          New Password
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showNewPassword ? "text" : "password"}
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            disabled={passwordLoading}
+                            required
+                            placeholder="Min 6 characters"
+                            className="w-full spatial-glass-inner px-3.5 py-2.5 pr-10 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-white/30 transition-all text-sm rounded-xl"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors cursor-pointer p-1"
+                            tabIndex={-1}
+                            aria-label={showNewPassword ? "Hide password" : "Show password"}
+                          >
+                            {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-white/70 uppercase tracking-wider mb-1.5">
+                          Confirm Password
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showNewPassword ? "text" : "password"}
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            disabled={passwordLoading}
+                            required
+                            placeholder="Re-enter password"
+                            className="w-full spatial-glass-inner px-3.5 py-2.5 pr-10 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-white/30 transition-all text-sm rounded-xl"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {passwordError && (
+                      <p className="text-xs text-red-400 font-medium">{passwordError}</p>
                     )}
-                    {passwordLoading ? "Updating..." : "Update Password"}
-                  </button>
-                </div>
-              </form>
+
+                    <div className="flex gap-2 justify-end pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsChangingPassword(false);
+                          setPasswordError(null);
+                          setNewPassword("");
+                          setConfirmPassword("");
+                        }}
+                        disabled={passwordLoading}
+                        className="px-4 py-2 text-xs font-medium text-white/60 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={passwordLoading || !newPassword || !confirmPassword}
+                        className="px-5 py-2 text-xs font-semibold text-[#0B0D17] bg-white hover:bg-gray-200 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                      >
+                        {passwordLoading ? (
+                          <div className="w-3.5 h-3.5 border-2 border-black/20 border-t-black rounded-full animate-spin"></div>
+                        ) : (
+                          <Lock className="w-3.5 h-3.5" />
+                        )}
+                        {passwordLoading ? "Updating..." : "Update Password"}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="spatial-glass-inner p-4 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-white/10 rounded-lg"><Lock className="w-4 h-4 text-white/70" /></div>
+                      <div>
+                        <div className="font-medium text-white text-sm">Account Password</div>
+                        <div className="text-xs text-white/40">••••••••••••</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsChangingPassword(true);
+                        setPasswordError(null);
+                        setPasswordSuccess(false);
+                      }}
+                      className="px-3 py-1.5 text-xs text-blue-400 hover:text-blue-300 font-medium hover:underline cursor-pointer"
+                    >
+                      Change
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="spatial-glass-inner p-4 rounded-xl flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/10 rounded-lg"><Lock className="w-4 h-4 text-white/70" /></div>
+              <div className="spatial-glass-inner p-5 rounded-2xl flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="p-2.5 bg-white/10 rounded-xl">
+                    <Shield className="w-5 h-5 text-emerald-400" />
+                  </div>
                   <div>
-                    <div className="font-medium text-white text-sm">Account Password</div>
-                    <div className="text-xs text-white/40">••••••••••••</div>
+                    <div className="font-semibold text-white text-sm">
+                      Signed in via {authProvider === "google" ? "Google" : authProvider === "github" ? "GitHub" : authProvider}
+                    </div>
+                    <div className="text-xs text-white/50 mt-0.5">
+                      Your account authentication is secured by {authProvider === "google" ? "Google" : authProvider === "github" ? "GitHub" : "your OAuth provider"}. Password updates are managed directly through your {authProvider === "google" ? "Google" : authProvider === "github" ? "GitHub" : "OAuth"} account.
+                    </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => {
-                    setIsChangingPassword(true);
-                    setPasswordError(null);
-                    setPasswordSuccess(false);
-                  }}
-                  className="px-3 py-1.5 text-xs text-blue-400 hover:text-blue-300 font-medium hover:underline cursor-pointer"
-                >
-                  Change
-                </button>
               </div>
             )}
           </div>

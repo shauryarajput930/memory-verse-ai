@@ -6,14 +6,14 @@ Embeds the query, runs pgvector similarity search, then asks Groq
 to write a natural-language answer referencing the matched documents.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends, Response
 from pydantic import BaseModel
 from typing import Optional
 from services.embeddings import get_query_embedding
 from services.llm import call_llm_json
-from config import supabase
+from services.cache import cache_service
+from config import supabase, REDIS_CACHE_TTL
 from dependencies import get_current_user
-from fastapi import Depends
 
 router = APIRouter(prefix="/api", tags=["search"])
 
@@ -33,6 +33,7 @@ class MatchedDocument(BaseModel):
 class SearchResponse(BaseModel):
     answer: str
     matched_documents: list[MatchedDocument]
+    cached: Optional[bool] = False
 
 
 ANSWER_SYSTEM_PROMPT = (
@@ -44,17 +45,39 @@ ANSWER_SYSTEM_PROMPT = (
 
 
 @router.post("/search", response_model=SearchResponse)
-async def smart_search(req: SearchRequest, user_id: str = Depends(get_current_user)):
+async def smart_search(
+    req: SearchRequest,
+    response: Response,
+    user_id: str = Depends(get_current_user),
+):
     """
-    Semantic search: embed query → pgvector similarity → Groq answer synthesis.
+    Semantic search:
+    1. Check Redis cache (1-hour TTL). Returns cached result instantly if present.
+    2. Fallback / Cache Miss: embed query → pgvector similarity → Groq answer synthesis.
+    3. Store result in Redis for subsequent requests.
+    4. Graceful degradation: if Redis is offline/unreachable, queries run uninterrupted.
     """
     if not req.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty.")
 
-    # 1. Embed the query
+    # 1. Check Redis cache first
+    cache_key = cache_service.generate_search_cache_key(user_id, req.query)
+    cached_payload = cache_service.get_json(cache_key)
+
+    if cached_payload is not None:
+        response.headers["X-Cache"] = "HIT"
+        return SearchResponse(
+            answer=cached_payload.get("answer", ""),
+            matched_documents=cached_payload.get("matched_documents", []),
+            cached=True,
+        )
+
+    response.headers["X-Cache"] = "MISS"
+
+    # 2. Embed the query
     query_embedding = get_query_embedding(req.query)
 
-    # 2. pgvector similarity search via Supabase RPC
+    # 3. pgvector similarity search via Supabase RPC
     results = supabase.rpc(
         "match_documents",
         {
@@ -67,12 +90,16 @@ async def smart_search(req: SearchRequest, user_id: str = Depends(get_current_us
     ).execute()
 
     if not results.data:
-        return SearchResponse(
+        empty_response = SearchResponse(
             answer="Nothing matching that yet — try uploading more documents!",
             matched_documents=[],
+            cached=False,
         )
+        # Cache negative result for 1 hour so repeated misses don't overload LLM/DB
+        cache_service.set_json(cache_key, empty_response.model_dump(), ttl=REDIS_CACHE_TTL)
+        return empty_response
 
-    # 3. Build context for Groq
+    # 4. Build context for Groq
     docs_context = "\n".join(
         f"- [{doc.get('title', 'Untitled')}] (id: {doc['id']}, category: {doc.get('category', 'N/A')}): {doc.get('summary', 'No summary')}"
         for doc in results.data
@@ -104,4 +131,23 @@ async def smart_search(req: SearchRequest, user_id: str = Depends(get_current_us
         for doc in results.data
     ]
 
-    return SearchResponse(answer=answer, matched_documents=matched)
+    search_result = SearchResponse(
+        answer=answer,
+        matched_documents=matched,
+        cached=False,
+    )
+
+    # 5. Cache result in Redis for 1 hour (3600 seconds)
+    cache_service.set_json(cache_key, search_result.model_dump(), ttl=REDIS_CACHE_TTL)
+
+    return search_result
+
+
+@router.post("/search/cache/clear")
+async def clear_search_cache(user_id: str = Depends(get_current_user)):
+    """
+    Manually invalidates all cached search queries for the authenticated user.
+    """
+    deleted = cache_service.invalidate_user_search_cache(user_id)
+    return {"message": f"Cleared {deleted} cached search queries.", "cleared_count": deleted}
+

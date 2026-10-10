@@ -16,23 +16,26 @@ graph TD
     subgraph Frontend [Next.js App Router]
         NextJS[Next.js UI & Spatial Views]:::frontend
         UploadUI[Pre-Upload Auto-Detect UI]:::frontend
-        ProfileUI[Profile & Settings: Edit Name / Password]:::frontend
-        AuthUI[Auth UI: Sign In, Sign Up, Forgot Password]:::frontend
+        ProfileUI[Profile & Settings: Edit Name / Conditional Password]:::frontend
+        AuthUI[Auth UI: Sign In, Sign Up, Forgot Password, Google & GitHub OAuth]:::frontend
         RecoveryModal[Password Recovery Modal]:::frontend
         Timeline[Chronological Spatial Timeline]:::frontend
+        SmartSearch[Smart Search UI]:::frontend
     end
     
     subgraph Backend [FastAPI Backend]
         FastAPI[FastAPI Server]:::backend
         OCR[PyMuPDF / PyTesseract OCR]:::backend
         AuthRouter[Auth Router: /api/auth/register]:::backend
+        CacheService[Redis Cache Service \n 1h TTL & Circuit Breaker]:::backend
         EmbeddingEngine[Sentence Transformers \n all-MiniLM-L6-v2]:::ai
     end
     
-    subgraph AI_Services [External AI/Storage]
+    subgraph AI_Services [External AI/Storage/Cache]
         Groq[Groq API: llama-3.3-70b-versatile \n NLP Extraction & Summaries]:::ai
         Cloudinary[Cloudinary \n Raw PDFs & Images]:::database
         GitHubAPI[GitHub REST API]:::backend
+        RedisCache[(Redis Cloud / Cache \n 1-Hour TTL)]:::database
     end
     
     subgraph Database [Supabase]
@@ -46,7 +49,7 @@ graph TD
     AuthUI -->|Auth / Password Reset Request| SupabaseAuth
     User -->|Reset Link Click| RecoveryModal
     RecoveryModal -->|Set New Password| SupabaseAuth
-    User -->|Edit Name / Change Password| ProfileUI
+    User -->|Edit Name / Change Password (Email Users)| ProfileUI
     ProfileUI -->|Update Metadata & Password| SupabaseAuth
     ProfileUI -->|Sync Profile| AuthRouter
     AuthRouter -->|Upsert Profile| Postgres
@@ -69,6 +72,8 @@ graph TD
     
     FastAPI -->|6. Store Metadata & Vector| Postgres
     Postgres --> PGVector
+    FastAPI -->|Invalidate User Search Cache| CacheService
+    CacheService -->|Purge Stale Keys| RedisCache
     
     FastAPI -->|7. Cosine Similarity Search| PGVector
     PGVector -->|Similar Documents| FastAPI
@@ -77,6 +82,12 @@ graph TD
     Groq -->|Relationship Explanation| FastAPI
     
     FastAPI -->|9. Store Relationships| Postgres
+    
+    %% Retrieval & Caching Flow
+    User -->|RAG Smart Search Query| SmartSearch
+    SmartSearch -->|POST /api/search| FastAPI
+    FastAPI -->|Check Cache| CacheService
+    CacheService <-->|Cache HIT / Set 1h TTL| RedisCache
     
     FastAPI -->|Response| NextJS
     NextJS -->|Displays Knowledge Graph & Spatial Timeline| User

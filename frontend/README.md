@@ -6,15 +6,15 @@ Modern Glassmorphic Spatial UI for **MemoryVerse AI**, developed by **Shaurya Ra
 
 - **Direct Instant Upload:** Auto-sets document title to the uploaded file name with instant submission.
 - **Profile Name Customization:** Interactive name editing within Profile & Settings with immediate live reflection in the Top Navbar.
-- **Complete Password Management:** 
-  - "Forgot password?" self-service email reset link from Sign In.
-  - Dedicated "Security & Password" card inside Profile view.
-  - Interactive "Set New Password" modal on email recovery link return.
-  - Show/hide password visibility toggles (`Eye` / `EyeOff`).
+- **Conditional Password Management:** 
+  - **Email & Password Users:** Dedicated "Security & Password" card inside Profile view with client-side length and match validation, plus visibility toggles (`Eye` / `EyeOff`).
+  - **OAuth Users (Google / GitHub):** Secured with an "OAuth Secured" status indicator; password changes are safely delegated to the OAuth provider.
+  - **Forgot Password Flow:** Self-service email reset link dispatched directly from Sign In.
+  - **Set New Password Modal:** Interactive recovery modal on email recovery redirect.
+- **Spatial 3D Timeline & Smart Voice Search:** Interactive timeline rendering and natural language query search, accelerated with sub-millisecond Redis caching in the backend.
 - **Glassmorphic Sign-Out Confirmation:** Modal popup preventing accidental logouts.
 - **Glassmorphic Custom Delete Modal:** Custom confirmation modal replacing native browser popups.
 - **GitHub Sync & OAuth Auth:** Powered by Supabase Auth with Google & GitHub provider support.
-- **Spatial 3D Timeline & Smart Voice Search:** Interactive timeline rendering and natural language query search.
 - **Browser Extension Error Isolation:** Early `<head>` error interception protecting the UI from third-party extension timeout errors.
 
 ## 🛠️ Getting Started

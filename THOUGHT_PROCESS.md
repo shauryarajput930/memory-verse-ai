@@ -22,7 +22,13 @@ For every uploaded document, the system generates a 384-dimensional vector embed
 
 These embeddings are stored in Supabase using the `pgvector` extension. When a new document is ingested, the system performs a cosine similarity search against all existing user documents. If similarity exceeds the threshold, a relationship is formed and explained by the LLM.
 
+### Redis Caching Layer (Sub-Millisecond RAG Retrieval & Circuit Breaker)
+Repeated searches were repeatedly running embedding inference, pgvector database queries, and Groq LLM token synthesis. I integrated a dedicated Redis caching layer with a 1-hour expiration (`REDIS_CACHE_TTL=3600`). It features deterministic user-isolated keys (`rag:search:{user_id}:{sha256_hash}`), automatic invalidation when user documents change, and a 30-second circuit-breaker backoff that prevents API latency if Redis goes offline.
+
 ## 4. Key Challenges Overcome
+* **High-Speed Redis Caching with Graceful Degradation:** Designed a caching layer using the official Python `redis` package that connects to Redis Cloud, Upstash, or local Redis. To prevent external network glitches or down states from crashing user searches, I built a circuit-breaker mechanism: if Redis is unreachable, the system transparently logs a warning, activates a 30-second backoff window to eliminate socket timeout penalties, and executes queries directly against Supabase RAG + Groq.
+* **Conditional Password Management for OAuth vs. Email Accounts:** Users signing in via Google or GitHub OAuth previously saw a password change form that failed because OAuth accounts don't use internal passwords. I updated the frontend and user session inspector to detect `session.user.app_metadata.provider`. Email+password users get full password management, while OAuth users see an elegant "OAuth Secured" security card explaining that password updates are safely managed by their identity provider.
+* **Google OAuth `redirect_uri_mismatch` (Error 400):** Solved Google OAuth blocking by correctly configuring the Supabase auth callback endpoint (`https://<supabase-id>.supabase.co/auth/v1/callback`) in Google Cloud Console's **Authorized redirect URIs** alongside localhost and Netlify in **Authorized JavaScript origins**.
 * **Real-Time Profile Name Editing & Navbar Sync:** Added full profile customization in `ProfileView`. When updated, the app saves changes to Supabase metadata and backend database tables, instantaneously reflecting the new name in the Top Navbar and avatar initial without needing a page refresh or re-login.
 * **Complete Self-Service Password Management:** Integrated a full forgot-password and change-password lifecycle. Users can trigger password reset emails from the login screen, complete recovery via a dedicated modal upon email link redirection, or change passwords within the Profile & Settings view.
 * **Cloudinary 401 ACL Failure on PDF Files:** Resolved Cloudinary's default delivery block on PDF image uploads (`401 deny or ACL failure`). Updated backend uploads to use `resource_type="raw"` with `.pdf` extension preservation and added a frontend URL sanitizer (`getSafeFileUrl`) that converts legacy `/image/upload/*.pdf` URLs to raster `.png` previews.
@@ -38,3 +44,4 @@ These embeddings are stored in Supabase using the `pgvector` extension. When a n
 ## 5. Future Roadmap
 * **Auto-Resume Generation:** Using the connected timeline and relationship graph to automatically generate tailored resumes for specific job applications based on semantic matching.
 * **Skill Gap Analysis:** Identifying missing skills based on the user's career goals and their current uploaded timeline.
+

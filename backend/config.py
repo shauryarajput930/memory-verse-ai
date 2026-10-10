@@ -35,3 +35,20 @@ cloudinary.config(
 # Groq
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
+# Redis Cache Configuration
+REDIS_HOST = os.getenv("REDIS_HOST")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
+REDIS_USERNAME = os.getenv("REDIS_USERNAME", "default")
+REDIS_CACHE_TTL = int(os.getenv("REDIS_CACHE_TTL", "3600"))  # 1 hour default
+
+# Derive REDIS_URL from REDIS_HOST/PORT/PASSWORD if explicit REDIS_URL is not provided
+if os.getenv("REDIS_URL"):
+    REDIS_URL = os.getenv("REDIS_URL")
+elif REDIS_HOST:
+    if REDIS_PASSWORD:
+        REDIS_URL = f"redis://{REDIS_USERNAME}:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}"
+    else:
+        REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}"
+else:
+    REDIS_URL = "redis://localhost:6379/0"

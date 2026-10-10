@@ -19,6 +19,7 @@ from config import supabase
 from dependencies import get_current_user
 from services.categorization import categorize_document
 from services.relationships import find_related_documents
+from services.cache import cache_service
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
@@ -281,6 +282,9 @@ async def upload_document(
     import gc
     gc.collect()
 
+    # Invalidate cached search queries for this user so fresh documents appear
+    cache_service.invalidate_user_search_cache(user_id)
+
     return DocumentResponse(
         id=doc_id,
         file_url=inserted["file_url"],
@@ -413,6 +417,7 @@ async def retry_categorization(req: RetryRequest, user_id: str = Depends(get_cur
             "relationships_found": relationships_found
         })
         
+    cache_service.invalidate_user_search_cache(user_id)
     return {"results": results}
 
 class GithubRepoRequest(BaseModel):
@@ -489,6 +494,7 @@ async def ingest_github_repos(req: GithubRepoRequest, user_id: str = Depends(get
             "relationships_found": relationships_found
         })
         
+    cache_service.invalidate_user_search_cache(user_id)
     return {"message": f"Successfully ingested {len(results)} repositories.", "results": results}
 
 class DeleteRequest(BaseModel):
@@ -515,6 +521,7 @@ async def delete_documents(req: DeleteRequest, user_id: str = Depends(get_curren
     # Delete from documents table
     res = supabase.table("documents").delete().in_("id", valid_ids).execute()
     
+    cache_service.invalidate_user_search_cache(user_id)
     return {"message": f"Successfully deleted {len(valid_ids)} documents.", "deleted_ids": valid_ids}
 
 class UpdateDocumentRequest(BaseModel):
@@ -541,5 +548,6 @@ async def update_document(doc_id: str, req: UpdateDocumentRequest, user_id: str 
     if not res.data:
         raise HTTPException(status_code=500, detail="Failed to update document.")
 
+    cache_service.invalidate_user_search_cache(user_id)
     return {"message": "Document updated successfully", "document": res.data[0]}
 

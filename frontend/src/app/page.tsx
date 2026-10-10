@@ -196,6 +196,12 @@ export default function Home() {
     (userEmail ? userEmail.split('@')[0] : "User");
   const userName = customName || baseUserName;
   const userAvatar = metadata.avatar_url || metadata.picture || null;
+  const rawProvider = 
+    session.user.app_metadata?.provider || 
+    (session.user.identities && session.user.identities[0]?.provider) || 
+    "email";
+  const authProvider = String(rawProvider).toLowerCase();
+  const isPasswordUser = authProvider === "email";
 
   return (
     <main className="min-h-screen">
@@ -317,6 +323,8 @@ export default function Home() {
             userEmail={userEmail} 
             userName={userName} 
             userAvatar={userAvatar} 
+            isPasswordUser={isPasswordUser}
+            authProvider={authProvider}
             onSignOut={() => setShowSignOutModal(true)} 
             onNameUpdated={(newName) => setCustomName(newName)}
           />
