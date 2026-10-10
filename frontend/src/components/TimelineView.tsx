@@ -326,11 +326,19 @@ export default function TimelineView({ userId, refreshTrigger = 0 }: { userId: s
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => openEditModal(item, e)} className="p-1.5 bg-black/40 hover:bg-black/60 rounded-md text-white/70 hover:text-white backdrop-blur-md">
+                    <div className="absolute top-2 right-2 flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all z-20">
+                      <button 
+                        onClick={(e) => openEditModal(item, e)} 
+                        className="p-2 sm:p-1.5 bg-black/60 hover:bg-black/90 active:scale-95 rounded-lg text-white/90 hover:text-white backdrop-blur-md border border-white/10 shadow-sm transition-colors"
+                        title="Edit Document"
+                      >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={(e) => openDeleteModal(item, e)} className="p-1.5 bg-black/40 hover:bg-red-500/80 rounded-md text-white/70 hover:text-white backdrop-blur-md">
+                      <button 
+                        onClick={(e) => openDeleteModal(item, e)} 
+                        className="p-2 sm:p-1.5 bg-black/60 hover:bg-red-500/80 active:scale-95 rounded-lg text-white/90 hover:text-white backdrop-blur-md border border-white/10 shadow-sm transition-colors"
+                        title="Delete Document"
+                      >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>

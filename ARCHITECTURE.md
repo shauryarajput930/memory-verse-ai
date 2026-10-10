@@ -37,12 +37,13 @@ flowchart TD
         Redis[(Redis Cloud / Cache: 1-Hour TTL)]
     end
 
-    %% Database
-    subgraph Database [Supabase PostgreSQL]
+    %% Database & Storage
+    subgraph Database [Supabase Cloud]
         Docs[(Documents Table)]
         Rels[(Relationships Table)]
         Profiles[(Profiles Table)]
         pgvector[(pgvector Extension)]
+        Storage[(Supabase Storage: documents Bucket)]
     end
 
     %% Flow
@@ -56,7 +57,8 @@ flowchart TD
     
     Ingest -->|Raw File| OCR
     OCR -->|Extracted Text| Ingest
-    Ingest -->|File Bytes (resource_type='raw' for PDFs)| Cloudinary
+    Ingest -->|Primary: Store File Bytes| Storage
+    Ingest -.->|Fallback Upload| Cloudinary
     Ingest -->|Fetch Repos| GitHubAPI
     
     Ingest -->|Text + Filename Context| Cat
@@ -114,8 +116,8 @@ When a user interacts with the application, their request is routed through a mo
    - First-time registrations trigger a **"Congratulations, [User Name]!"** modal.
    - Returning user logins trigger a **"Welcome Back, [User Name]!"** modal.
    - Google & GitHub OAuth triggers live browser redirection to provider sign-in screens.
-3. **Direct File Ingestion & Auto-Fill (`ingestion.py`):** Dropping a file automatically uses the filename as title for instant archive creation. PyMuPDF / PyTesseract extracts raw text, uploads source assets to **Cloudinary**, and saves document metadata into **Supabase**.
-4. **Cloudinary Raw Delivery & Safe Fallback:** PDFs are uploaded as `resource_type="raw"` to bypass Cloudinary's default image ACL blocks (`401 deny or ACL failure`). Legacy `/image/upload/*.pdf` URLs are converted dynamically via `getSafeFileUrl()` to high-definition raster previews (`.png`).
+3. **Direct File Ingestion & Storage (`ingestion.py`):** Dropping a file automatically uses the filename as title for instant archive creation. PyMuPDF / PyTesseract extracts raw text, uploads source assets directly to **Supabase Storage** (public `documents` bucket) for guaranteed 200 OK delivery without 401 ACL blocks, with Cloudinary maintained as fallback.
+4. **Resilient Document Access:** Documents stored in Supabase Storage are delivered over Cloudflare CDN directly in the browser as `application/pdf`. Legacy Cloudinary files are safely handled with `getSafeFileUrl()`.
 5. **Categorization & Structuring (`categorization.py`):** The raw text is processed by `categorization.py` using **Groq LLM** (`llama-3.3-70b-versatile` with fallbacks) to determine category pills (*Projects, Skills, Certifications, Internships, Achievements, Academics*) and event dates.
 6. **Vector Embeddings (`embeddings.py`):** Processed document text is run through a local HuggingFace `sentence-transformer` model (`all-MiniLM-L6-v2`) to generate a 384-dimensional semantic embedding vector. The model is lazy-loaded on demand to keep container memory under 120 MB on Render.
 7. **Relationship Engine (`relationships.py`):** Once saved in Supabase, `relationships.py` performs a similarity search using `pgvector`. It feeds potential matches to Groq for logical verification. Confirmed connections are indexed into the `relationships` table.

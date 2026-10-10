@@ -11,6 +11,8 @@ allowed_origins = [
     "http://127.0.0.1:3000",
     "https://memory-verse-ai.netlify.app",
     "https://memory-verse-ai.netlify.app/",
+    "https://memory-verse-ai-shauryarajput930s-projects.vercel.app",
+    "https://memory-verse-ai-shauryarajput930s-projects.vercel.app/",
 ]
 production_origin = os.getenv("FRONTEND_URL")
 if production_origin:
@@ -26,7 +28,7 @@ if production_origin:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r"https://.*\.netlify\.app",
+    allow_origin_regex=r"https://.*(\.netlify\.app|\.vercel\.app)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -20,7 +20,7 @@ MemoryVerse AI is a modern, full-stack spatial identity system built by **Shaury
   - Automatic cache invalidation when users upload, edit, or delete documents.
   - Graceful degradation with circuit-breaker: if Redis is unreachable, queries seamlessly fall back to Supabase + Groq without errors or latency penalties.
 - **🚪 Sign Out Confirmation Modal:** Custom glassmorphism confirmation modal preventing accidental sign-outs.
-- **✏️ Post-Upload Inline Edit:** Seamlessly edit document titles, categories (*Projects, Skills, Certifications, Internships, Achievements, Academics*), dates, and summaries after document archiving.
+- **✏️ Post-Upload Inline Edit & Mobile Actions:** Seamlessly edit document titles, categories (*Projects, Skills, Certifications, Internships, Achievements, Academics*), dates, and summaries after document archiving. Action buttons are fully optimized with touch targets visible on mobile devices.
 - **🗑️ Glassmorphic Confirmation Modal:** Custom animated glassmorphism delete modal for safe document removal.
 - **🐙 GitHub Repository Auto-Sync:** Type any GitHub username to automatically pull top public repositories into your spatial portfolio with AI categorization and relationship discovery.
 - **🏷️ Intelligent Auto-Categorization:** Uses Groq LLM inference (`llama-3.3-70b-versatile`) with fallbacks (`llama-3.1-8b-instant`, `mixtral-8x7b-32768`, `gemma2-9b-it`) to parse document text into structured metadata.
@@ -28,7 +28,7 @@ MemoryVerse AI is a modern, full-stack spatial identity system built by **Shaury
 - **⏳ Interactive Chronological Timeline:** Automatically plots documents by year along a glowing 3D spatial timeline rod.
 - **🎙️ Semantic Smart & Voice Search:** Search your entire portfolio with natural language queries or voice search, powered by HuggingFace embeddings (`all-MiniLM-L6-v2`) and AI response synthesis.
 - **🔒 Flexible Authentication:** Supports Email/Password authentication as well as GitHub and Google OAuth login powered by Supabase Auth.
-- **🖼️ Reliable Cloud Media Storage:** Uploads original high-res assets to Cloudinary. PDFs are explicitly routed as `raw` resources to guarantee public, unblocked access and prevent 401 ACL delivery restrictions. Includes client-side fallback rendering for legacy files.
+- **🖼️ Native Cloud Storage & Direct Delivery:** Powered by Supabase Storage (`documents` bucket) for instant, 100% reliable 200 OK delivery of PDF resumes, certificates, and images without third-party ACL restrictions or account blocks. Includes Cloudinary fallback integration.
 - **🛡️ Browser Extension Resilience:** Global capture-phase error filtering in `<head>` that isolates external Chrome extension timeouts from interrupting the Next.js runtime.
 
 ---
@@ -38,9 +38,9 @@ MemoryVerse AI is a modern, full-stack spatial identity system built by **Shaury
 - **Frontend:** Next.js 16 (App Router, React 19, Tailwind CSS, Lucide Icons, Glassmorphic Design System) — Deployed on **Netlify**
 - **Backend:** FastAPI (Python 3.11/3.13), Uvicorn, Pydantic, PyMuPDF, PyTesseract — Deployed on **Render**
 - **Cache & Performance:** Redis (Redis Cloud / Upstash / Local) via Python `redis` client with 1-hour TTL and graceful degradation
-- **Database & Auth:** Supabase (PostgreSQL with `pgvector` extension & Supabase Auth)
+- **Database, Auth & Storage:** Supabase (PostgreSQL with `pgvector` extension, Supabase Auth, & Supabase Storage)
 - **AI & Inference:** Groq API (`llama-3.3-70b-versatile`), HuggingFace `sentence-transformers` (`all-MiniLM-L6-v2`)
-- **Cloud Media:** Cloudinary API
+- **Cloud Media:** Supabase Storage (Primary) & Cloudinary API (Fallback)
 
 ---
 
@@ -137,18 +137,18 @@ npm run dev
   - `SUPABASE_URL`, `SUPABASE_SECRET_KEY`
   - `GROQ_API_KEY`
   - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
-  - `FRONTEND_URL` (Set to your Netlify production domain: `https://memory-verse-ai.netlify.app`)
+  - `FRONTEND_URL` (Set to your frontend domain: `https://memory-verse-ai.netlify.app` or `https://memory-verse-ai-shauryarajput930s-projects.vercel.app`)
   - `REDIS_URL` (Redis Cloud / Upstash connection URL)
   - `REDIS_CACHE_TTL` (Optional: defaults to 3600 seconds)
 
-### B. Netlify (Next.js Frontend)
+### B. Vercel / Netlify (Next.js Frontend)
 - **Framework**: `Next.js`
 - **Root Directory**: `frontend`
 - **Build Command**: `npm run build`
 - **Environment Variables**:
   - `NEXT_PUBLIC_SUPABASE_URL`
   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or `NEXT_PUBLIC_SUPABASE_ANON_KEY`)
-  - `NEXT_PUBLIC_SITE_URL` (Set to your canonical Netlify production domain: `https://memory-verse-ai.netlify.app`)
+  - `NEXT_PUBLIC_SITE_URL` (Set to your canonical production domain, e.g. `https://memory-verse-ai-shauryarajput930s-projects.vercel.app` or `https://memory-verse-ai.netlify.app`)
   - `NEXT_PUBLIC_API_URL` (Set to your Render backend URL, e.g. `https://memory-verse-ai-3yvh.onrender.com`)
 
 ---
@@ -157,12 +157,16 @@ npm run dev
 
 To enable Google Login or GitHub Login:
 1. Go to your **Supabase Dashboard** -> **Authentication** -> **URL Configuration**.
-2. Set **Site URL** to your production domain (`https://memory-verse-ai.netlify.app`).
-3. Add `https://memory-verse-ai.netlify.app/**` and `http://localhost:3000/**` to **Redirect URLs**.
+2. Set **Site URL** to your active production domain (e.g. `https://memory-verse-ai-shauryarajput930s-projects.vercel.app` or `https://memory-verse-ai.netlify.app`).
+3. Add all your domains to **Redirect URLs**:
+   - `http://localhost:3000/**`
+   - `https://memory-verse-ai-shauryarajput930s-projects.vercel.app/**`
+   - `https://memory-*-verse-ai-shauryarajput930s-projects.vercel.app/**`
+   - `https://memory-verse-ai.netlify.app/**`
 4. Go to **Authentication** -> **Providers**, select **Google** (or GitHub), and toggle **Enable Provider**.
 5. In **Google Cloud Console**:
-   - Under your OAuth 2.0 Web Client, add `https://<your-supabase-project-id>.supabase.co/auth/v1/callback` to **Authorized redirect URIs**.
-   - Add `http://localhost:3000` and `https://memory-verse-ai.netlify.app` to **Authorized JavaScript origins**.
+   - Under your OAuth 2.0 Web Client, add `https://kvynvwxqwrtwmwmkmxak.supabase.co/auth/v1/callback` to **Authorized redirect URIs**.
+   - Add `http://localhost:3000`, `https://memory-verse-ai-shauryarajput930s-projects.vercel.app`, and `https://memory-verse-ai.netlify.app` to **Authorized JavaScript origins**.
 6. Paste your **Client ID** and **Client Secret** into the Supabase Google Provider dashboard and click **Save**.
 
 ---

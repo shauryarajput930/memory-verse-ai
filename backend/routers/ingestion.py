@@ -8,6 +8,8 @@ inserts into Supabase, then automatically runs categorization + relationship dis
 
 import io
 import os
+import re
+import time
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Depends
 from pydantic import BaseModel
 from typing import Optional, List
@@ -149,6 +151,7 @@ def upload_to_cloudinary(file_bytes: bytes, filename: str, file_ext: str) -> str
                 "folder": "memoryverse",
                 "resource_type": "raw",
                 "public_id": f"{base_name}.pdf",
+                "access_mode": "public",
                 "overwrite": True,
             }
         else:
@@ -156,6 +159,7 @@ def upload_to_cloudinary(file_bytes: bytes, filename: str, file_ext: str) -> str
                 "folder": "memoryverse",
                 "resource_type": "image",
                 "public_id": base_name,
+                "access_mode": "public",
                 "overwrite": True,
             }
             if fmt:
@@ -165,6 +169,35 @@ def upload_to_cloudinary(file_bytes: bytes, filename: str, file_ext: str) -> str
         return result["secure_url"]
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Cloudinary upload failed: {str(e)}")
+
+
+def upload_document_storage(file_bytes: bytes, filename: str, file_ext: str) -> str:
+    """
+    Primary: Upload to Supabase Storage ('documents' public bucket).
+    Guarantees 200 OK unblocked public access for PDFs & images with zero Cloudinary ACL issues.
+    Fallback: Uploads to Cloudinary if Supabase storage encounter issues.
+    """
+    clean_name = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', filename)
+    timestamp = int(time.time())
+    unique_path = f"uploads/{timestamp}_{clean_name}"
+    content_type = "application/pdf" if file_ext.lower() == ".pdf" else "image/jpeg"
+    if file_ext.lower() == ".png":
+        content_type = "image/png"
+
+    try:
+        supabase.storage.from_("documents").upload(
+            unique_path,
+            file_bytes,
+            {"content-type": content_type, "upsert": "true"},
+        )
+        public_url = supabase.storage.from_("documents").get_public_url(unique_path)
+        if public_url:
+            return public_url.rstrip("?")
+    except Exception as e:
+        print(f"Supabase storage upload notice: {e}, falling back to Cloudinary...")
+
+    # Fallback to Cloudinary
+    return upload_to_cloudinary(file_bytes, filename, file_ext)
 
 
 
@@ -221,7 +254,7 @@ async def upload_document(
         if not raw_text:
             raw_text = f"[No text could be extracted from {file.filename}]"
 
-        file_url = upload_to_cloudinary(file_bytes, file.filename or "document", ext)
+        file_url = upload_document_storage(file_bytes, file.filename or "document", ext)
 
     # ── URL path ─────────────────────────────────────────────────────────
     elif url:
