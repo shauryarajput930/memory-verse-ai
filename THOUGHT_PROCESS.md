@@ -9,7 +9,7 @@ As the developer of **MemoryVerse AI** (**Shaurya Rajput**), I decided to build 
 ## 3. Technology Choices & Architecture
 
 ### Frontend (Next.js & Tailwind CSS)
-I chose Next.js for its fast rendering and App Router capabilities. The UI was designed with a glassmorphism design system to feel modern, responsive, and spatial—featuring instant document uploads, category pills, custom date pickers, glassmorphic sign-out confirmation modals, and dynamic onboarding welcome popups.
+I chose Next.js for its fast rendering and App Router capabilities. The UI was designed with a glassmorphism design system to feel modern, responsive, and spatial—featuring instant document uploads, category pills, custom date pickers, glassmorphic sign-out confirmation modals, dynamic onboarding welcome popups, profile name editing with real-time top navbar sync, self-service password recovery, and password visibility controls.
 
 ### Backend (FastAPI & Python)
 Python was the natural choice for the backend due to its rich AI ecosystem. FastAPI provides sub-second async performance, crucial when handling PDF text extraction, OCR parsing, Cloudinary asset uploads, user profile registration, and Groq LLM inference.
@@ -23,12 +23,14 @@ For every uploaded document, the system generates a 384-dimensional vector embed
 These embeddings are stored in Supabase using the `pgvector` extension. When a new document is ingested, the system performs a cosine similarity search against all existing user documents. If similarity exceeds the threshold, a relationship is formed and explained by the LLM.
 
 ## 4. Key Challenges Overcome
+* **Real-Time Profile Name Editing & Navbar Sync:** Added full profile customization in `ProfileView`. When updated, the app saves changes to Supabase metadata and backend database tables, instantaneously reflecting the new name in the Top Navbar and avatar initial without needing a page refresh or re-login.
+* **Complete Self-Service Password Management:** Integrated a full forgot-password and change-password lifecycle. Users can trigger password reset emails from the login screen, complete recovery via a dedicated modal upon email link redirection, or change passwords within the Profile & Settings view.
+* **Cloudinary 401 ACL Failure on PDF Files:** Resolved Cloudinary's default delivery block on PDF image uploads (`401 deny or ACL failure`). Updated backend uploads to use `resource_type="raw"` with `.pdf` extension preservation and added a frontend URL sanitizer (`getSafeFileUrl`) that converts legacy `/image/upload/*.pdf` URLs to raster `.png` previews.
+* **Browser Extension Runtime Error Isolation:** Addressed Next.js dev overlay interruptions caused by third-party Chrome extension timeouts (`chrome-extension://... "chrome: call method" timed out`) by introducing a capture-phase suppression listener in the document `<head>`.
 * **Full Name Registration & Profile Sync:** Expanded the user signup flow to collect **Full Name** alongside email and password, persisting user metadata to Supabase Auth and syncing user records to a custom `profiles` table in Supabase via `/api/auth/register`.
 * **Dynamic Welcome & Onboarding Popups:** Created intelligent session tracking (`isNewUser` flag and creation timestamps) to trigger a **"Congratulations, [User Name]!"** modal for new registrations and a **"Welcome Back, [User Name]!"** modal for returning logins.
-* **Google OAuth Intercept:** Gracefully handled "Continue with Google" clicks by intercepting the redirect and showing an inline toast message: *"Google Login is coming soon!"*.
 * **Sign Out Confirmation Modal:** Introduced a glassmorphism confirmation modal attached via React `createPortal` to prevent accidental sign-outs.
 * **OCR Graceful Fallback:** When image certificates had low resolution or Tesseract wasn't installed on Windows, LLMs previously complained about missing OCR data. I resolved this by feeding document filename heuristics and title context into the prompt, guaranteeing clean, accurate summaries.
-* **Format & Extension Fixes:** Prevented double extensions (`.pdf.pdf`) on Cloudinary uploads by passing explicit format properties and public IDs.
 * **Supabase Secret Key Compatibility:** Patched regex handling in Supabase client initialization to support new `sb_secret_...` format keys smoothly.
 * **Render Free Tier Memory Tuning (<512 MB RAM):** Prevented backend container startup crashes by switching Render deployment to `env: docker` (with CPU-only PyTorch) and converting `SentenceTransformer` loading to lazy execution on demand. Container cold-start RAM was reduced from >500 MB to under 120 MB.
 * **Auth Redirect `404 DEPLOYMENT_NOT_FOUND` Fix:** Resolved origin errors after login by introducing dynamic origin resolution (`NEXT_PUBLIC_SITE_URL` / `window.location.origin`), guaranteeing authentication redirects always return to the active production domain (`https://memory-verse-ai.netlify.app`).
@@ -36,5 +38,3 @@ These embeddings are stored in Supabase using the `pgvector` extension. When a n
 ## 5. Future Roadmap
 * **Auto-Resume Generation:** Using the connected timeline and relationship graph to automatically generate tailored resumes for specific job applications based on semantic matching.
 * **Skill Gap Analysis:** Identifying missing skills based on the user's career goals and their current uploaded timeline.
-
-

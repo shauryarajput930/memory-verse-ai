@@ -14,34 +14,49 @@ graph TD
     User((User))
     
     subgraph Frontend [Next.js App Router]
-        NextJS[Next.js UI]:::frontend
+        NextJS[Next.js UI & Spatial Views]:::frontend
         UploadUI[Pre-Upload Auto-Detect UI]:::frontend
+        ProfileUI[Profile & Settings: Edit Name / Password]:::frontend
+        AuthUI[Auth UI: Sign In, Sign Up, Forgot Password]:::frontend
+        RecoveryModal[Password Recovery Modal]:::frontend
         Timeline[Chronological Spatial Timeline]:::frontend
     end
     
     subgraph Backend [FastAPI Backend]
         FastAPI[FastAPI Server]:::backend
         OCR[PyMuPDF / PyTesseract OCR]:::backend
+        AuthRouter[Auth Router: /api/auth/register]:::backend
         EmbeddingEngine[Sentence Transformers \n all-MiniLM-L6-v2]:::ai
     end
     
     subgraph AI_Services [External AI/Storage]
         Groq[Groq API: llama-3.3-70b-versatile \n NLP Extraction & Summaries]:::ai
-        Cloudinary[Cloudinary \n Asset Storage]:::database
+        Cloudinary[Cloudinary \n Raw PDFs & Images]:::database
         GitHubAPI[GitHub REST API]:::backend
     end
     
     subgraph Database [Supabase]
-        Postgres[(PostgreSQL)]:::database
+        SupabaseAuth[Supabase Auth & Session]:::database
+        Postgres[(PostgreSQL Documents & Profiles)]:::database
         PGVector[(pgvector Index)]:::database
     end
+
+    %% Auth & User Operations
+    User -->|Sign In / Sign Up / Forgot Password| AuthUI
+    AuthUI -->|Auth / Password Reset Request| SupabaseAuth
+    User -->|Reset Link Click| RecoveryModal
+    RecoveryModal -->|Set New Password| SupabaseAuth
+    User -->|Edit Name / Change Password| ProfileUI
+    ProfileUI -->|Update Metadata & Password| SupabaseAuth
+    ProfileUI -->|Sync Profile| AuthRouter
+    AuthRouter -->|Upsert Profile| Postgres
 
     %% Workflow Connections
     User -->|Uploads File/URL/GitHub| UploadUI
     UploadUI -->|1. Auto-Detect Preview| FastAPI
     UploadUI -->|Multipart Form Data| FastAPI
     
-    FastAPI -->|2. Store Original File| Cloudinary
+    FastAPI -->|2. Store Original (raw PDF)| Cloudinary
     FastAPI -->|Fetch GitHub Repos| GitHubAPI
     FastAPI -->|3. Extract Text| OCR
     OCR -->|Raw Text| FastAPI
@@ -66,4 +81,3 @@ graph TD
     FastAPI -->|Response| NextJS
     NextJS -->|Displays Knowledge Graph & Spatial Timeline| User
 ```
-

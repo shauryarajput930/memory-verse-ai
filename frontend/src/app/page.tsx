@@ -10,7 +10,7 @@ import SmartSearch from "@/components/SmartSearch";
 import AuthUI from "@/components/AuthUI";
 import LibraryView from "@/components/LibraryView";
 import ProfileView from "@/components/ProfileView";
-import { LogOut } from "lucide-react";
+import { LogOut, Lock, KeyRound, Check } from "lucide-react";
 
 export default function Home() {
   const [session, setSession] = useState<Session | null>(null);
@@ -20,6 +20,15 @@ export default function Home() {
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [welcomeModal, setWelcomeModal] = useState<{ show: boolean; isNewUser: boolean; userName: string } | null>(null);
+  const [customName, setCustomName] = useState<string | null>(null);
+
+  // Password Recovery state
+  const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
+  const [recoveryPassword, setRecoveryPassword] = useState("");
+  const [recoveryConfirm, setRecoveryConfirm] = useState("");
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
+  const [recoverySuccess, setRecoverySuccess] = useState(false);
 
   const handleNav = (view: "home" | "library" | "profile") => {
     setActiveView(view);
@@ -78,8 +87,12 @@ export default function Home() {
     let isMounted = true;
 
     if (typeof window !== "undefined") {
-      if (window.location.hash === "#library") setActiveView("library");
-      else if (window.location.hash === "#profile") setActiveView("profile");
+      const hash = window.location.hash || "";
+      if (hash === "#library") setActiveView("library");
+      else if (hash === "#profile") setActiveView("profile");
+      else if (hash.includes("type=recovery") || hash.includes("reset-password")) {
+        setShowPasswordResetModal(true);
+      }
     }
 
     const timeout = setTimeout(() => {
@@ -103,8 +116,11 @@ export default function Home() {
 
       const {
         data: { subscription },
-      } = supabase.auth.onAuthStateChange((_event, session) => {
+      } = supabase.auth.onAuthStateChange((event, session) => {
         if (isMounted) setSession(session);
+        if (event === "PASSWORD_RECOVERY") {
+          setShowPasswordResetModal(true);
+        }
       });
 
       return () => {
@@ -118,6 +134,43 @@ export default function Home() {
       clearTimeout(timeout);
     }
   }, []);
+
+  const handleRecoverySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (recoveryPassword.length < 6) {
+      setRecoveryError("Password must be at least 6 characters long.");
+      return;
+    }
+    if (recoveryPassword !== recoveryConfirm) {
+      setRecoveryError("Passwords do not match.");
+      return;
+    }
+
+    setRecoveryLoading(true);
+    setRecoveryError(null);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: recoveryPassword,
+      });
+      if (error) throw error;
+
+      setRecoverySuccess(true);
+      setTimeout(() => {
+        setShowPasswordResetModal(false);
+        setRecoverySuccess(false);
+        setRecoveryPassword("");
+        setRecoveryConfirm("");
+        if (typeof window !== "undefined") {
+          window.history.replaceState(null, "", window.location.pathname);
+        }
+      }, 2500);
+    } catch (err: unknown) {
+      setRecoveryError(err instanceof Error ? err.message : "Failed to reset password.");
+    } finally {
+      setRecoveryLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -135,12 +188,13 @@ export default function Home() {
   const userId = session.user.id;
   const userEmail = session.user.email || "";
   const metadata = session.user.user_metadata || {};
-  const userName = 
+  const baseUserName = 
     metadata.full_name || 
     metadata.name || 
     metadata.user_name || 
     metadata.preferred_username || 
     (userEmail ? userEmail.split('@')[0] : "User");
+  const userName = customName || baseUserName;
   const userAvatar = metadata.avatar_url || metadata.picture || null;
 
   return (
@@ -258,7 +312,14 @@ export default function Home() {
         ) : activeView === "library" ? (
           <LibraryView userId={userId} />
         ) : (
-          <ProfileView userId={userId} userEmail={userEmail} userName={userName} userAvatar={userAvatar} onSignOut={() => setShowSignOutModal(true)} />
+          <ProfileView 
+            userId={userId} 
+            userEmail={userEmail} 
+            userName={userName} 
+            userAvatar={userAvatar} 
+            onSignOut={() => setShowSignOutModal(true)} 
+            onNameUpdated={(newName) => setCustomName(newName)}
+          />
         )}
       </div>
 
@@ -343,6 +404,87 @@ export default function Home() {
               >
                 {welcomeModal.isNewUser ? "Explore Workspace" : "Go to Dashboard"}
               </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Password Recovery / Reset Modal ──────────────────────────── */}
+      {showPasswordResetModal && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[9999] overflow-y-auto custom-scrollbar">
+          <div className="min-h-full flex items-center justify-center p-4">
+            <div 
+              className="fixed inset-0 bg-black/80 backdrop-blur-md" 
+              onClick={() => !recoveryLoading && !recoverySuccess && setShowPasswordResetModal(false)}
+            ></div>
+            <div className="relative z-10 spatial-glass bg-[#0A0A0F]/95 w-full max-w-md p-8 sm:p-10 rounded-3xl border border-white/20 shadow-[0_20px_60px_rgba(0,0,0,0.8)] animate-in fade-in zoom-in-95">
+              <div className="w-16 h-16 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center mx-auto mb-5 text-blue-400 shadow-[0_0_30px_rgba(59,130,246,0.25)]">
+                <Lock className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-black text-white text-center mb-2 tracking-tight">Set New Password</h3>
+              <p className="text-sm text-white/60 text-center mb-6 leading-relaxed">
+                Enter your new password to regain full access to your account.
+              </p>
+
+              {recoverySuccess ? (
+                <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm rounded-2xl flex items-center justify-center gap-2 font-medium animate-in fade-in">
+                  <Check className="w-5 h-5 shrink-0" />
+                  Password updated! Redirecting to dashboard...
+                </div>
+              ) : (
+                <form onSubmit={handleRecoverySubmit} className="space-y-4 text-left">
+                  <div>
+                    <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider mb-1.5">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={recoveryPassword}
+                      onChange={(e) => setRecoveryPassword(e.target.value)}
+                      disabled={recoveryLoading}
+                      required
+                      placeholder="Minimum 6 characters"
+                      className="w-full spatial-glass-inner px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-400/50 transition-all text-sm rounded-xl"
+                      autoFocus
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider mb-1.5">
+                      Confirm New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={recoveryConfirm}
+                      onChange={(e) => setRecoveryConfirm(e.target.value)}
+                      disabled={recoveryLoading}
+                      required
+                      placeholder="Re-enter password"
+                      className="w-full spatial-glass-inner px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-400/50 transition-all text-sm rounded-xl"
+                    />
+                  </div>
+
+                  {recoveryError && (
+                    <p className="text-xs text-red-400 font-medium">{recoveryError}</p>
+                  )}
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={recoveryLoading || !recoveryPassword || !recoveryConfirm}
+                      className="w-full py-3.5 px-6 bg-white text-[#0B0D17] font-bold rounded-xl hover:bg-gray-200 transition-all focus:outline-none disabled:opacity-50 active:scale-[0.98] cursor-pointer shadow-lg shadow-white/10 flex items-center justify-center gap-2"
+                    >
+                      {recoveryLoading ? (
+                        <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin"></div>
+                      ) : (
+                        <KeyRound className="w-4 h-4" />
+                      )}
+                      {recoveryLoading ? "Updating Password..." : "Set New Password"}
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           </div>
         </div>,

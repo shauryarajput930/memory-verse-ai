@@ -4,6 +4,8 @@ node_modules/
 out/
 build/
 dist/
+.netlify/
+coverage/
 
 # Python & Virtual Environments
 __pycache__/
@@ -16,6 +18,8 @@ venv/
 .venv/
 ENV/
 *.log
+.pytest_cache/
+*.egg-info/
 
 # Environment Variables & Secrets
 .env
@@ -24,6 +28,7 @@ ENV/
 .env.test
 .env.production
 *.env
+!.env.example
 
 # Supabase CLI Cache
 supabase/.temp/
@@ -33,3 +38,5 @@ supabase/.temp/
 Thumbs.db
 .vscode/
 .idea/
+*.swp
+*.swo

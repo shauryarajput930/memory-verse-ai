@@ -9,6 +9,12 @@ MemoryVerse AI is a modern, full-stack spatial identity system built by **Shaury
 ## 🌟 Key Features
 
 - **⚡ Instant File Archive & Auto-Fill:** Upload any document or certificate (PDF/PNG/JPG). File name is automatically assigned as the document title for direct instant submission.
+- **👤 Profile & Identity Customization:** Edit and update your Full Name directly inside the Profile section with instant, real-time reflection across the top navigation bar and dashboard without requiring a page refresh.
+- **🔐 Complete Password Management:** 
+  - **Forgot Password Flow:** Self-service email recovery link dispatch via Supabase Auth from the Sign In view.
+  - **Change Password:** Dedicated "Security & Password" card inside Profile & Settings for logged-in users with client-side length and match validation.
+  - **Set New Password Modal:** Automatic recovery detection when following email reset links.
+  - **Password Visibility Toggles:** Clean eye icon (`Eye` / `EyeOff`) toggles for effortless verification.
 - **🚪 Sign Out Confirmation Modal:** Custom glassmorphism confirmation modal preventing accidental sign-outs.
 - **✏️ Post-Upload Inline Edit:** Seamlessly edit document titles, categories (*Projects, Skills, Certifications, Internships, Achievements, Academics*), dates, and summaries after document archiving.
 - **🗑️ Glassmorphic Confirmation Modal:** Custom animated glassmorphism delete modal for safe document removal.
@@ -18,7 +24,8 @@ MemoryVerse AI is a modern, full-stack spatial identity system built by **Shaury
 - **⏳ Interactive Chronological Timeline:** Automatically plots documents by year along a glowing 3D spatial timeline rod.
 - **🎙️ Semantic Smart & Voice Search:** Search your entire portfolio with natural language queries or voice search, powered by HuggingFace embeddings (`all-MiniLM-L6-v2`) and AI response synthesis.
 - **🔒 Flexible Authentication:** Supports Email/Password authentication as well as GitHub and Google OAuth login powered by Supabase Auth.
-- **🖼️ Cloud Media Storage:** Uploads original high-res assets to Cloudinary with optimized format handling for PDFs and images.
+- **🖼️ Reliable Cloud Media Storage:** Uploads original high-res assets to Cloudinary. PDFs are explicitly routed as `raw` resources to guarantee public, unblocked access and prevent 401 ACL delivery restrictions. Includes client-side fallback rendering for legacy files.
+- **🛡️ Browser Extension Resilience:** Global capture-phase error filtering in `<head>` that isolates external Chrome extension timeouts from interrupting the Next.js runtime.
 
 ---
 
@@ -138,7 +145,10 @@ To enable Google Login or GitHub Login:
 2. Set **Site URL** to your production domain (`https://memory-verse-ai.netlify.app`).
 3. Add `https://memory-verse-ai.netlify.app/**` and `http://localhost:3000/**` to **Redirect URLs**.
 4. Go to **Authentication** -> **Providers**, select **Google** (or GitHub), and toggle **Enable Provider**.
-5. Paste your **Client ID** and **Client Secret** obtained from Google Cloud Console / GitHub Developer Settings.
+5. In **Google Cloud Console**:
+   - Under your OAuth 2.0 Web Client, add `https://<your-supabase-project-id>.supabase.co/auth/v1/callback` to **Authorized redirect URIs**.
+   - Add `http://localhost:3000` and `https://memory-verse-ai.netlify.app` to **Authorized JavaScript origins**.
+6. Paste your **Client ID** and **Client Secret** into the Supabase Google Provider dashboard and click **Save**.
 
 ---
 

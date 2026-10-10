@@ -1,6 +1,6 @@
 # MemoryVerse AI — Backend (FastAPI Service)
 
-High-performance Python FastAPI service for **MemoryVerse AI**, providing document extraction, AI summarization, semantic embeddings, knowledge graph relationships, and Supabase integration.
+High-performance Python FastAPI service for **MemoryVerse AI**, providing document extraction, AI summarization, semantic embeddings, knowledge graph relationships, user profile registration, and Supabase integration.
 
 ---
 
@@ -10,7 +10,8 @@ High-performance Python FastAPI service for **MemoryVerse AI**, providing docume
 - **🤖 Groq LLM Inference:** Powered by Groq's ultra-fast API using `llama-3.3-70b-versatile` with automatic fallbacks (`llama-3.1-8b-instant`, `mixtral-8x7b-32768`, `gemma2-9b-it`) to extract structured title, category, event date, and summaries.
 - **🧠 Semantic Embeddings:** Local sentence transformer embeddings using `all-MiniLM-L6-v2` for vector similarity matching and smart search.
 - **🔗 Spatial Knowledge Graph:** Automatic relationship discovery between portfolio items (projects, certificates, skills, internships) using cosine similarity on `pgvector`.
-- **☁️ Cloud Storage Integration:** Automatic document upload to Cloudinary with secure URL generation.
+- **☁️ Cloud Storage Integration:** Automated document upload to Cloudinary. PDF documents are explicitly uploaded as `resource_type="raw"` to guarantee public browser accessibility and bypass Cloudinary image ACL restrictions.
+- **👤 Profile Registration & Sync:** Dedicated endpoints for registering user names and synchronizing user profiles with Supabase.
 - **🔐 Supabase Service Role Integration:** Server-side database access using Supabase Python SDK.
 
 ---
@@ -25,7 +26,7 @@ backend/
 │   ├── ingestion.py        # /api/archive document ingestion & preview endpoints
 │   ├── timeline.py         # /api/timeline timeline fetch, update, delete endpoints
 │   ├── search.py           # /api/search vector & natural language search endpoints
-│   └── auth.py             # Auth status helper endpoints
+│   └── auth.py             # User profile sync (/api/auth/register, /api/auth/me)
 ├── services/
 │   ├── llm.py              # Groq LLM wrapper with fallback handling
 │   ├── ocr.py              # PDF/Image text extraction service
@@ -47,13 +48,16 @@ backend/
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
 | `GET` | `/health` / `/api/health` | System health check and uptime ping |
-| `POST` | `/api/archive` | Ingest document, upload to Cloudinary, run LLM analysis & save |
+| `POST` | `/api/archive` | Ingest document, upload to Cloudinary (`raw` for PDF), run LLM analysis & save |
 | `POST` | `/api/documents/analyze-preview` | AI pre-upload text extraction and summary generation |
 | `GET` | `/api/timeline/{user_id}` | Fetch user items grouped chronologically by year |
 | `PUT` | `/api/documents/{item_id}` | Update document title, category, summary, or date |
 | `DELETE` | `/api/documents/{item_id}` | Delete document and remove related graph links |
 | `POST` | `/api/search` | Natural language semantic search across portfolio |
 | `POST` | `/api/github-sync` | Sync public GitHub repositories into portfolio |
+| `POST` | `/api/auth/register` | Upsert user profile record (full name, email) into database |
+| `GET` | `/api/auth/me` | Retrieve authenticated user profile metadata |
+| `POST` | `/api/auth/verify` | Validate bearer token validity |
 
 ---
 

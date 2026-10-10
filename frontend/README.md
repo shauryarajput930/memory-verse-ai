@@ -5,10 +5,17 @@ Modern Glassmorphic Spatial UI for **MemoryVerse AI**, developed by **Shaurya Ra
 ## 🚀 Features
 
 - **Direct Instant Upload:** Auto-sets document title to the uploaded file name with instant submission.
+- **Profile Name Customization:** Interactive name editing within Profile & Settings with immediate live reflection in the Top Navbar.
+- **Complete Password Management:** 
+  - "Forgot password?" self-service email reset link from Sign In.
+  - Dedicated "Security & Password" card inside Profile view.
+  - Interactive "Set New Password" modal on email recovery link return.
+  - Show/hide password visibility toggles (`Eye` / `EyeOff`).
 - **Glassmorphic Sign-Out Confirmation:** Modal popup preventing accidental logouts.
 - **Glassmorphic Custom Delete Modal:** Custom confirmation modal replacing native browser popups.
 - **GitHub Sync & OAuth Auth:** Powered by Supabase Auth with Google & GitHub provider support.
 - **Spatial 3D Timeline & Smart Voice Search:** Interactive timeline rendering and natural language query search.
+- **Browser Extension Error Isolation:** Early `<head>` error interception protecting the UI from third-party extension timeout errors.
 
 ## 🛠️ Getting Started
 
@@ -36,5 +43,3 @@ When deploying to Netlify:
 - **Root Directory**: `frontend`
 - **Framework**: `Next.js`
 - Set `NEXT_PUBLIC_SITE_URL` to your production domain (`https://memory-verse-ai.netlify.app`) to ensure auth redirects return to the active production deployment.
-
-

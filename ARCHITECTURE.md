@@ -11,6 +11,8 @@ flowchart TD
     subgraph Frontend [Next.js Client — Netlify]
         UI[Upload UI / Timeline / Smart Search / Library / Profile]
         AuthGuard[Supabase Auth & JWT Layer]
+        SafeUrl[getSafeFileUrl Sanitizer]
+        PassModal[Password Recovery Modal]
     end
 
     %% FastAPI Backend Core (Render)
@@ -27,7 +29,7 @@ flowchart TD
     %% External Services
     subgraph External [External Services]
         OCR[PyMuPDF / PyTesseract OCR]
-        Cloudinary[(Cloudinary Storage)]
+        Cloudinary[(Cloudinary Storage: raw PDFs & images)]
         Groq[Groq API: llama-3.3-70b-versatile]
         Embed[HF MiniLM Local Embedding]
         GitHubAPI[GitHub REST API]
@@ -47,12 +49,12 @@ flowchart TD
     AuthGuard -->|Bearer Token| Auth
     
     Auth -->|Validated| Ingest
-    UI -->|Registration / Profile Sync| AuthRouter
+    UI -->|Registration / Profile Name Update| AuthRouter
     AuthRouter -->|Upsert User Profile| Profiles
     
     Ingest -->|Raw File| OCR
     OCR -->|Extracted Text| Ingest
-    Ingest -->|File Bytes| Cloudinary
+    Ingest -->|File Bytes (resource_type='raw' for PDFs)| Cloudinary
     Ingest -->|Fetch Repos| GitHubAPI
     
     Ingest -->|Text + Filename Context| Cat
@@ -81,26 +83,30 @@ flowchart TD
     Embed -->|Query Vector| Srch
     Srch -->|Vector Match| pgvector
     pgvector -->|Ranked Results| Srch
+
+    UI -->|Opens Document| SafeUrl
+    SafeUrl -->|Bypasses 401 ACL| Cloudinary
+
+    User -->|Email Reset Link Click| PassModal
+    PassModal -->|supabase.auth.updateUser| AuthGuard
 ```
 
 ## Step-by-Step Flow
 
 When a user interacts with the application, their request is routed through a modern decoupled pipeline:
 
-1. **Authentication & Profile Registration:** All requests from the Next.js client hit Supabase Auth & JWT validation first. When a user creates an account, their **Full Name** and email are saved into `auth.users` metadata and synced to the `profiles` table via `/api/auth/register`. Authentication redirects (OAuth & email confirmation) use dynamic origin resolution (`NEXT_PUBLIC_SITE_URL` / `window.location.origin`) targeting the canonical Netlify domain (`https://memory-verse-ai.netlify.app`).
+1. **Authentication, Profile Management & Password Security:** 
+   - All requests from the Next.js client hit Supabase Auth & JWT validation first. 
+   - When a user signs up, their **Full Name** and email are saved into `auth.users` metadata and synced to the `profiles` table via `/api/auth/register`.
+   - Users can update their **Full Name** in `ProfileView`, instantly updating the Top Navbar and profile avatar without reloading.
+   - Self-service **Forgot Password** sends an authenticated recovery link. When clicked, `onAuthStateChange('PASSWORD_RECOVERY')` triggers the **Set New Password** modal in `page.tsx`. Logged-in users can also change their password directly in the Profile security card.
 2. **Dynamic Onboarding & On-Screen Notifications:** 
    - First-time registrations trigger a **"Congratulations, [User Name]!"** modal.
    - Returning user logins trigger a **"Welcome Back, [User Name]!"** modal.
-   - Clicking "Continue with Google" shows an interactive **"Google Login is coming soon!"** toast notification.
+   - Google & GitHub OAuth triggers live browser redirection to provider sign-in screens.
 3. **Direct File Ingestion & Auto-Fill (`ingestion.py`):** Dropping a file automatically uses the filename as title for instant archive creation. PyMuPDF / PyTesseract extracts raw text, uploads source assets to **Cloudinary**, and saves document metadata into **Supabase**.
-4. **Categorization & Structuring (`categorization.py`):** The raw text is processed by `categorization.py` using **Groq LLM** (`llama-3.3-70b-versatile` with fallbacks) to determine category pills (*Projects, Skills, Certifications, Internships, Achievements, Academics*) and event dates.
-5. **Vector Embeddings (`embeddings.py`):** Processed document text is run through a local HuggingFace `sentence-transformer` model (`all-MiniLM-L6-v2`) to generate a 384-dimensional semantic embedding vector. The model is lazy-loaded on demand to keep container memory under 120 MB on Render.
-6. **Relationship Engine (`relationships.py`):** Once saved in Supabase, `relationships.py` performs a similarity search using `pgvector`. It feeds potential matches to Groq for logical verification. Confirmed connections are indexed into the `relationships` table.
-7. **Retrieval (`timeline.py` & `search.py`):** The Next.js frontend fetches processed data via `timeline.py` (chronological sorting) and `search.py` (cosine-similarity matching against `pgvector`).
-
-## Why These Choices?
-
-- **Supabase + pgvector (vs. separate vector database):** Combines standard relational data (document metadata, user profiles) alongside vector embeddings in a single PostgreSQL instance.
-- **Groq `llama-3.3-70b-versatile` (vs. OpenAI/Anthropic):** Groq's ultra-fast LPU inference endpoints deliver sub-second JSON generation for instant document categorization and relationship verification.
-- **Local Lazy Embeddings (MiniLM) (vs. API embeddings):** Generates 384D embeddings locally via HuggingFace `sentence-transformers`, lazy-loaded on demand to fit within Render Free Tier RAM limits (512 MB).
-
+4. **Cloudinary Raw Delivery & Safe Fallback:** PDFs are uploaded as `resource_type="raw"` to bypass Cloudinary's default image ACL blocks (`401 deny or ACL failure`). Legacy `/image/upload/*.pdf` URLs are converted dynamically via `getSafeFileUrl()` to high-definition raster previews (`.png`).
+5. **Categorization & Structuring (`categorization.py`):** The raw text is processed by `categorization.py` using **Groq LLM** (`llama-3.3-70b-versatile` with fallbacks) to determine category pills (*Projects, Skills, Certifications, Internships, Achievements, Academics*) and event dates.
+6. **Vector Embeddings (`embeddings.py`):** Processed document text is run through a local HuggingFace `sentence-transformer` model (`all-MiniLM-L6-v2`) to generate a 384-dimensional semantic embedding vector. The model is lazy-loaded on demand to keep container memory under 120 MB on Render.
+7. **Relationship Engine (`relationships.py`):** Once saved in Supabase, `relationships.py` performs a similarity search using `pgvector`. It feeds potential matches to Groq for logical verification. Confirmed connections are indexed into the `relationships` table.
+8. **Retrieval (`timeline.py` & `search.py`):** The Next.js frontend fetches processed data via `timeline.py` (chronological sorting) and `search.py` (cosine-similarity matching against `pgvector`).
